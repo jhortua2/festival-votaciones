@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block titulo %}Confirmar voto{% endblock %}
+{% block contenido %}
+<div class="container-lg py-4">
+  <div class="sheet" role="dialog" aria-labelledby="conf-t">
+    <div class="franja"></div>
+    <div class="sheet-top">
+      <span class="eyebrow">Último paso</span>
+      <h1 class="h-display" id="conf-t">¿Confirmas tu voto?</h1>
+      <div class="elegida">
+        {% include "includes/miniatura.html" with o=opcion %}
+        <span><span class="small text-secondary">{{ votacion.nombre }}</span><br><b class="fs-5">{{ opcion.nombre }}</b>{% if opcion.detalle %}<br><span class="small text-secondary">{{ opcion.detalle }}</span>{% endif %}</span>
+      </div>
+      <div class="aviso"><span aria-hidden="true">!</span><span><b>Después de confirmar no podrás cambiarlo.</b> Recibirás un código de comprobante.</span></div>
+    </div>
+    <form method="post" class="d-grid gap-2 px-4 pb-4">
+      {% csrf_token %}
+      <input type="hidden" name="opcion" value="{{ opcion.pk }}">
+      <input type="hidden" name="confirmado" value="1">
+      <button class="btn btn-sol btn-lg" type="submit">Sí, confirmar mi voto</button>
+      <a class="btn btn-linea" href="{% url 'votaciones:opciones' votacion.pk %}">Cambiar opción</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

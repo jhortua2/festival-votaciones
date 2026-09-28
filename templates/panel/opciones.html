@@ -1,0 +1,49 @@
+{% extends "panel/base_panel.html" %}{% load festival humanize %}
+{% block titulo %}Opciones · {{ votacion.nombre }}{% endblock %}
+{% block panel %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div><span class="eyebrow">{{ votacion.categoria.nombre }} › {{ votacion.nombre }}</span><h1 class="h3 fw-bold m-0">Gestión de opciones</h1></div>
+  <div class="d-flex gap-2 align-items-center">
+    <span class="{{ votacion.estado|pill }}">{{ votacion.estado_etiqueta }}</span>
+    {% if not votacion.publicada %}<form method="post" action="{% url 'panel:votacion_publicar' votacion.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><button class="btn btn-sol btn-sm" {% if not votacion.puede_publicarse %}title="Necesita mínimo 2 opciones activas"{% endif %}>Publicar votación</button></form>{% endif %}
+  </div>
+</div>
+{% if tiene_votos %}<div class="aviso"><span aria-hidden="true">!</span><span><b>Esta votación ya tiene votos.</b> Las opciones con votos no se pueden eliminar, solo inactivar con una justificación que queda en auditoría (RN-08).</span></div>{% endif %}
+<div class="tabla-caja table-responsive"><table class="table tabla">
+  <thead><tr><th>Opción</th><th>Detalle</th><th class="num">Votos</th><th>Estado</th><th>Acciones</th></tr></thead>
+  <tbody>{% for o in opciones %}
+    <tr>
+      <td><div class="d-flex gap-2 align-items-center">{% include "includes/miniatura.html" with o=o clase="sm" %}<span><b>{{ o.nombre }}</b>{% if o.justificacion_inactivacion %}<br><span class="nota">Inactivada: {{ o.justificacion_inactivacion }}</span>{% endif %}</span></div></td>
+      <td>{{ o.detalle }}</td>
+      <td class="num">{{ o.n_votos|intcomma }}</td>
+      <td><span class="pill {% if o.activa %}pill-abierta{% else %}pill-inactiva{% endif %}">{% if o.activa %}Activa{% else %}Inactiva{% endif %}</span></td>
+      <td>
+        <div class="d-flex gap-1 flex-wrap">
+          <a class="btn btn-linea btn-sm" href="{% url 'panel:opcion_editar' o.pk %}">Editar</a>
+          {% if not o.activa %}<form method="post" action="{% url 'panel:opcion_estado' o.pk %}">{% csrf_token %}<button class="btn btn-linea btn-sm">Reactivar</button></form>{% endif %}
+          <form method="post" action="{% url 'panel:opcion_eliminar' o.pk %}">{% csrf_token %}<button class="btn btn-linea btn-sm" {% if o.n_votos %}disabled title="Tiene votos: solo se puede inactivar"{% endif %}>Eliminar</button></form>
+        </div>
+        {% if o.activa %}
+        <form method="post" action="{% url 'panel:opcion_estado' o.pk %}" class="d-flex gap-1 mt-2">{% csrf_token %}
+          <input class="form-control form-control-sm" name="justificacion" placeholder="Justificación para inactivar" maxlength="255" aria-label="Justificación para inactivar {{ o.nombre }}">
+          <button class="btn btn-linea btn-sm">Inactivar</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% empty %}<tr><td colspan="5" class="text-secondary">Esta votación aún no tiene opciones.</td></tr>{% endfor %}</tbody>
+</table></div>
+<form method="post" enctype="multipart/form-data" class="panel-caja" novalidate>
+  {% csrf_token %}
+  <h2 class="h6 fw-bold">Nueva opción</h2>
+  <div class="row g-2">
+    <div class="col-md-5">{% include "includes/campo.html" with campo=form.nombre %}</div>
+    <div class="col-md-4">{% include "includes/campo.html" with campo=form.detalle %}</div>
+    <div class="col-4 col-md-1">{% include "includes/campo.html" with campo=form.orden %}</div>
+    <div class="col-8 col-md-2">{% include "includes/campo.html" with campo=form.color %}</div>
+    <div class="col-md-6">{% include "includes/campo.html" with campo=form.descripcion %}</div>
+    <div class="col-md-6">{% include "includes/campo.html" with campo=form.imagen %}</div>
+  </div>
+  <button class="btn btn-sol btn-sm" type="submit">+ Agregar opción</button>
+</form>
+{% endblock %}

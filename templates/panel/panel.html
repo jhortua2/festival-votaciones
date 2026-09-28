@@ -1,0 +1,32 @@
+{% extends "panel/base_panel.html" %}{% load festival humanize %}
+{% block titulo %}Panel{% endblock %}
+{% block panel %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div><span class="eyebrow">{{ edicion_actual.nombre }}</span><h1 class="h3 fw-bold m-0">Panel principal</h1></div>
+  <a class="btn btn-sol btn-sm" href="{% url 'panel:votacion_nueva' %}">+ Nueva votación</a>
+</div>
+<div class="row g-2">
+  <div class="col-6 col-lg-3"><div class="kpi"><small>Votaciones abiertas</small><b>{{ n_abiertas }}</b></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><small>Votos hoy</small><b>{{ votos_hoy|intcomma }}</b></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><small>Categorías activas</small><b>{{ n_categorias }}</b></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><small>Votantes registrados</small><b>{{ n_votantes|intcomma }}</b></div></div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="panel-caja d-flex flex-column gap-2 h-100">
+      <div class="d-flex justify-content-between"><h2 class="h6 fw-bold m-0">Votaciones</h2><a href="{% url 'panel:votaciones' %}">Gestionar →</a></div>
+      <div class="tabla-caja table-responsive"><table class="table tabla">
+        <thead><tr><th>Votación</th><th>Estado</th><th class="num">Votos</th></tr></thead>
+        <tbody>{% for v in votaciones %}<tr><td>{{ v.nombre }}<br><span class="nota">{{ v.categoria.nombre }}</span></td><td><span class="{{ v.estado|pill }}">{{ v.estado_etiqueta }}</span></td><td class="num">{{ v.n_votos|intcomma }}</td></tr>
+        {% empty %}<tr><td colspan="3" class="text-secondary">Aún no hay votaciones.</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="panel-caja h-100">
+      <div class="d-flex justify-content-between"><h2 class="h6 fw-bold m-0">Auditoría reciente</h2><a href="{% url 'panel:auditoria' %}">Ver todo →</a></div>
+      <ul class="log list-unstyled m-0 mt-2">{% for r in auditoria %}<li><time>{{ r.fecha|date:"d/m H:i" }}</time><span>{{ r.accion }}{% if r.detalle %}: {{ r.detalle|truncatechars:70 }}{% endif %}<br><span class="nota">{{ r.usuario.email|default:"sistema" }}</span></span></li>{% empty %}<li class="text-secondary">Sin registros.</li>{% endfor %}</ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

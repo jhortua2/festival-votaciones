@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block titulo %}Mis votos{% endblock %}
+{% block contenido %}
+<div class="container-lg py-4 d-flex flex-column gap-3">
+  <div><span class="eyebrow">Tu historial</span><h1 class="h-display m-0" style="font-size:2rem">Mis votos</h1></div>
+  {% for v in votos %}
+    <div class="vrow" style="cursor:default">
+      <h3>{{ v.opcion.nombre }}</h3><code style="color:var(--sol)">{{ v.codigo }}</code>
+      <span class="meta"><span>{{ v.votacion.nombre }}</span><span>{{ v.votacion.categoria.nombre }}</span><span>{{ v.fecha|date:"j M Y · g:i a" }}</span></span>
+    </div>
+  {% empty %}
+    <div class="ejemplo">Todavía no has votado. <a href="{% url 'votaciones:categorias' %}">Ver votaciones</a></div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block titulo %}Iniciar sesión{% endblock %}
+{% block contenido %}
+<div class="container-lg py-4">
+  <div class="row g-4 align-items-stretch">
+    <div class="col-lg-6 d-none d-lg-block"><div class="auth-side h-100"><div class="franja"></div><h2 class="h-display">¡Bienvenido de vuelta a la parranda!</h2><p class="m-0">Entra para votar o para administrar las votaciones.</p></div></div>
+    <div class="col-lg-6">
+      <form method="post" class="mx-auto" style="max-width:460px" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+        <h1 class="h-display mb-3" style="font-size:2rem">Inicia sesión</h1>
+        {% if next %}<div class="alert alert-info">Inicia sesión para continuar con tu voto.</div>{% endif %}
+        {% if form.non_field_errors %}<div class="alert alert-danger">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>{% endif %}
+        {% include "includes/campo.html" with campo=form.username %}
+        {% include "includes/campo.html" with campo=form.password %}
+        <button class="btn btn-sol btn-lg w-100" type="submit">Entrar</button>
+        <p class="nota mt-2">¿Olvidaste tu contraseña? La recuperación por correo se habilita cuando se configure el servidor de correo (RF-02).</p>
+        <p class="text-center text-secondary mt-3 mb-0">¿No tienes cuenta? <a href="{% url 'cuentas:registro' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Regístrate</a></p>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

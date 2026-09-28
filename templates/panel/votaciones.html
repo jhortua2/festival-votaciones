@@ -1,0 +1,27 @@
+{% extends "panel/base_panel.html" %}{% load festival humanize %}
+{% block titulo %}Votaciones{% endblock %}
+{% block panel %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div><span class="eyebrow">{{ edicion_actual.nombre }}</span><h1 class="h3 fw-bold m-0">Gestión de votaciones</h1></div>
+  <a class="btn btn-sol btn-sm" href="{% url 'panel:votacion_nueva' %}">+ Nueva votación</a>
+</div>
+<div class="tabla-caja table-responsive"><table class="table tabla">
+  <thead><tr><th>Votación</th><th>Categoría</th><th>Reglas</th><th class="num">Opciones</th><th class="num">Votos</th><th>Estado</th><th>Acciones</th></tr></thead>
+  <tbody>{% for v in votaciones %}
+    <tr>
+      <td><b>{{ v.nombre }}</b><br><span class="nota">{{ v.apertura|date:"j M H:i" }} → {{ v.cierre|date:"j M Y H:i" }}</span></td>
+      <td>{{ v.categoria.nombre }}</td>
+      <td class="nota">{{ v.get_frecuencia_display }}<br>{{ v.get_visibilidad_display }}</td>
+      <td class="num">{{ v.n_ops }}</td><td class="num">{{ v.n_votos|intcomma }}</td>
+      <td><span class="{{ v.estado|pill }}">{{ v.estado_etiqueta }}</span></td>
+      <td><div class="d-flex gap-1 flex-wrap">
+        <a class="btn btn-linea btn-sm" href="{% url 'panel:opciones' v.pk %}">Opciones</a>
+        <a class="btn btn-linea btn-sm" href="{% url 'panel:votacion_editar' v.pk %}">Editar</a>
+        {% if not v.publicada %}<form method="post" action="{% url 'panel:votacion_publicar' v.pk %}">{% csrf_token %}<button class="btn btn-sol btn-sm">Publicar</button></form>{% endif %}
+        {% if v.estado == "abierta" or v.estado == "proxima" %}<a class="btn btn-linea btn-sm" href="{% url 'panel:votacion_cerrar' v.pk %}">Cerrar</a>{% endif %}
+      </div></td>
+    </tr>
+  {% empty %}<tr><td colspan="7" class="text-secondary">Aún no hay votaciones. Crea la primera.</td></tr>{% endfor %}</tbody>
+</table></div>
+<p class="nota m-0">El estado se calcula solo: <b>Borrador</b> hasta publicarla; luego <b>Próxima</b>, <b>Abierta</b> o <b>Cerrada</b> según las fechas. Para publicar se necesitan mínimo 2 opciones activas (RN-07).</p>
+{% endblock %}

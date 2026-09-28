@@ -1,0 +1,17 @@
+{% extends "panel/base_panel.html" %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block panel %}
+<a class="text-secondary text-decoration-none fw-semibold" href="{% if volver_url %}{{ volver_url }}{% else %}{% url volver %}{% endif %}">← Volver</a>
+<h1 class="h3 fw-bold m-0">{{ titulo }}</h1>
+<form method="post" class="panel-caja" style="max-width:760px" novalidate {% if multipart %}enctype="multipart/form-data"{% endif %}>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>{% endif %}
+  <div class="row g-2">
+    {% for campo in form %}
+      <div class="{% if campo.name == 'descripcion' or campo.name == 'nombre' or campo.name == 'justificacion' %}col-12{% else %}col-md-6{% endif %}">{% include "includes/campo.html" %}</div>
+    {% endfor %}
+  </div>
+  {% if nota %}<p class="nota">{{ nota }}</p>{% endif %}
+  <button class="btn {% if peligro %}btn-pollera{% else %}btn-sol{% endif %}" type="submit">{{ boton|default:"Guardar" }}</button>
+</form>
+{% endblock %}

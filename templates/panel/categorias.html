@@ -1,0 +1,32 @@
+{% extends "panel/base_panel.html" %}{% load festival %}
+{% block titulo %}Categorías{% endblock %}
+{% block panel %}
+<div><span class="eyebrow">{{ edicion_actual.nombre }}</span><h1 class="h3 fw-bold m-0">Gestión de categorías</h1></div>
+<form method="post" class="panel-caja" novalidate>
+  {% csrf_token %}
+  <h2 class="h6 fw-bold">Nueva categoría</h2>
+  <div class="row g-2">
+    <div class="col-md-4">{% include "includes/campo.html" with campo=form.nombre %}</div>
+    <div class="col-md-8">{% include "includes/campo.html" with campo=form.descripcion %}</div>
+    <div class="col-4 col-md-2">{% include "includes/campo.html" with campo=form.orden %}</div>
+    <div class="col-8 col-md-4">{% include "includes/campo.html" with campo=form.icono %}</div>
+    <div class="col-md-2">{% include "includes/campo.html" with campo=form.color %}</div>
+  </div>
+  <button class="btn btn-sol btn-sm" type="submit">+ Agregar categoría</button>
+</form>
+<div class="tabla-caja table-responsive"><table class="table tabla">
+  <thead><tr><th class="num">Orden</th><th>Categoría</th><th class="num">Votaciones</th><th>Estado</th><th>Acciones</th></tr></thead>
+  <tbody>{% for c in categorias %}
+    <tr><td class="num">{{ c.orden }}</td><td><b>{{ c.nombre }}</b><br><span class="nota">{{ c.descripcion }}</span></td><td class="num">{{ c.n_vot }}</td>
+      <td><span class="pill {% if c.activa %}pill-abierta{% else %}pill-inactiva{% endif %}">{% if c.activa %}Activa{% else %}Inactiva{% endif %}</span></td>
+      <td><div class="d-flex gap-1 flex-wrap">
+        <a class="btn btn-linea btn-sm" href="{% url 'panel:categoria_editar' c.pk %}">Editar</a>
+        <form method="post" action="{% url 'panel:categoria_estado' c.pk %}">{% csrf_token %}
+          {% if request.session.confirmar_categoria == c.pk %}<input type="hidden" name="confirmar" value="1"><button class="btn btn-pollera btn-sm">Confirmar inactivación</button>
+          {% else %}<button class="btn btn-linea btn-sm">{% if c.activa %}Inactivar{% else %}Activar{% endif %}</button>{% endif %}
+        </form>
+      </div></td></tr>
+  {% empty %}<tr><td colspan="5" class="text-secondary">Aún no hay categorías.</td></tr>{% endfor %}</tbody>
+</table></div>
+<p class="nota m-0">El nombre no puede repetirse en la misma edición. Si la categoría tiene votaciones abiertas, se pide confirmar antes de inactivarla (CU-05, flujo 3a).</p>
+{% endblock %}

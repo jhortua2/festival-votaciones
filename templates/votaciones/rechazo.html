@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block titulo %}Voto no registrado{% endblock %}
+{% block contenido %}
+<div class="container-lg py-4">
+  <div class="sheet">
+    <div class="franja"></div>
+    <div class="sheet-top">
+      <span class="sello {% if motivo == 'cerrada' or motivo == 'no_abierta' %}gris{% else %}mal{% endif %}" aria-hidden="true">{% if motivo == 'cerrada' or motivo == 'no_abierta' %}⏱{% else %}!{% endif %}</span>
+      <span class="eyebrow" style="color:#FF8A80">Voto no registrado</span>
+      <h1 class="h-display">{% if motivo == "limite" %}Ya votaste en esta votación{% elif motivo == "cerrada" %}Esta votación ya cerró{% elif motivo == "no_abierta" %}Esta votación aún no abre{% else %}No pudimos registrar tu voto{% endif %}</h1>
+      <p class="text-secondary m-0">{{ mensaje }}</p>
+      {% if motivo == "limite" %}<span class="pend">Frecuencia de voto · RN-06</span>{% endif %}
+    </div>
+    <div class="d-grid gap-2 px-4 pb-4">
+      {% if motivo == "opcion_inactiva" %}<a class="btn btn-sol" href="{% url 'votaciones:opciones' votacion.pk %}">Elegir otra opción</a>{% endif %}
+      <a class="btn {% if motivo == 'opcion_inactiva' %}btn-linea{% else %}btn-sol{% endif %}" href="{% url 'votaciones:categorias' %}">Ver otras votaciones</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}{% load festival humanize %}
+{% block titulo %}{{ votacion.nombre }}{% endblock %}
+{% block contenido %}
+<div class="container-lg py-4 d-flex flex-column gap-3">
+  <a class="text-secondary text-decoration-none fw-semibold" href="{% url 'votaciones:categoria' votacion.categoria.pk %}">← Votaciones de {{ votacion.categoria.nombre }}</a>
+  <div class="det-hero d-flex flex-column gap-2">
+    <div class="d-flex justify-content-between align-items-center gap-2"><span class="eyebrow">{{ votacion.categoria.nombre }}</span><span class="{{ votacion.estado|pill }}">{{ votacion.estado_etiqueta }}</span></div>
+    <h1 class="h-display m-0">{{ votacion.nombre }}</h1>
+    {% if votacion.descripcion %}<p class="text-secondary m-0">{{ votacion.descripcion }}</p>{% endif %}
+    <span class="pend align-self-start">Relación con el fallo del jurado · pendiente (P-06)</span>
+  </div>
+
+  <h2 class="h5 fw-bold m-0 mt-2">Reglas de esta votación</h2>
+  <div class="row g-2">
+    <div class="col-md-6"><div class="regla"><span class="ic">1×</span><div><b>{{ votacion.get_frecuencia_display }}</b><span>Regla configurada por el administrador. <span class="pend">RN-06</span></span></div></div></div>
+    <div class="col-md-6"><div class="regla"><span class="ic">⏱</span><div><b>Abre {{ votacion.apertura|date:"j M Y · g:i a" }}</b><span>Cierra {{ votacion.cierre|date:"j M Y · g:i a" }}</span></div></div></div>
+    <div class="col-md-6"><div class="regla"><span class="ic">🔒</span><div><b>Tu voto no se puede cambiar</b><span>Por eso te pedimos confirmarlo antes. <span class="pend">RN-05</span></span></div></div></div>
+    <div class="col-md-6"><div class="regla"><span class="ic">%</span><div><b>Resultados: {{ votacion.get_visibilidad_display|lower }}</b><span>Configurable por votación. <span class="pend">P-05</span></span></div></div></div>
+  </div>
+
+  {% if ya_voto %}
+    <div class="alert alert-success m-0">Ya votaste en esta votación{% if votacion.frecuencia == "diaria" %} hoy{% endif %}. Puedes ver tu comprobante en <a href="{% url 'cuentas:mis_votos' %}">Mis votos</a>.</div>
+  {% endif %}
+
+  {% if votacion.esta_abierta %}
+    <a class="btn btn-sol btn-lg" href="{% url 'votaciones:opciones' votacion.pk %}">Ver las {{ n_opciones }} opciones</a>
+  {% elif votacion.estado == "proxima" %}
+    <div class="ejemplo">Esta votación abre el {{ votacion.apertura|date:"j \d\e F \a \l\a\s g:i a" }}. <a href="{% url 'votaciones:opciones' votacion.pk %}">Ver las opciones</a></div>
+  {% else %}
+    <div class="ejemplo">Esta votación ya cerró. No se reciben más votos.</div>
+  {% endif %}
+
+  {% if resultados %}
+  <section class="panel-caja d-flex flex-column gap-3">
+    <h2 class="h6 fw-bold m-0">Resultados {% if votacion.estado == "abierta" %}parciales{% endif %} · {{ total|intcomma }} votos</h2>
+    {% for o in resultados %}
+      <div><div class="d-flex justify-content-between small"><b>{{ o.nombre }}</b><span><b>{{ o.porcentaje|floatformat:1 }} %</b> · {{ o.total|intcomma }}</span></div>
+      <div class="barra mt-1"><div class="{% if forloop.first %}lider{% endif %}" style="width:{{ o.porcentaje|floatformat:0 }}%"></div></div></div>
+    {% endfor %}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

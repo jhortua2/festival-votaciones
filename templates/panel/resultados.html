@@ -1,0 +1,34 @@
+{% extends "panel/base_panel.html" %}{% load festival humanize %}
+{% block titulo %}Resultados{% endblock %}
+{% block panel %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2">
+  <div><span class="eyebrow">Consulta de resultados</span><h1 class="h3 fw-bold m-0">{{ votacion.nombre|default:"Resultados" }}</h1></div>
+  {% if todas %}
+  <select class="form-select form-select-sm" style="max-width:320px" aria-label="Elegir votación" onchange="location.href='{% url 'panel:resultados' %}'+this.value+'/'">
+    {% for t in todas %}<option value="{{ t.pk }}" {% if t.pk == votacion.pk %}selected{% endif %}>{{ t.nombre }}</option>{% endfor %}
+  </select>
+  {% endif %}
+</div>
+{% if votacion %}
+  {% if votacion.estado == "abierta" %}<div><span class="pill pill-proxima">Parciales · votación abierta</span></div>{% endif %}
+  <div class="row g-2">
+    <div class="col-6 col-lg-3"><div class="kpi"><small>Total de votos</small><b>{{ total|intcomma }}</b></div></div>
+    <div class="col-6 col-lg-3"><div class="kpi"><small>Opciones</small><b>{{ filas|length }}</b></div></div>
+    <div class="col-6 col-lg-3"><div class="kpi"><small>Votos rechazados</small><b>{{ rechazados|intcomma }}</b></div></div>
+    <div class="col-6 col-lg-3"><div class="kpi"><small>Estado</small><b style="font-size:1.25rem">{{ votacion.estado_etiqueta }}</b></div></div>
+  </div>
+  <section class="panel-caja d-flex flex-column gap-3">
+    <h2 class="h6 fw-bold m-0">Votos por opción</h2>
+    {% for o in filas %}
+      <div><div class="d-flex justify-content-between gap-2"><b>{{ o.nombre }}{% if not o.activa %} <span class="pill pill-inactiva">Inactiva</span>{% endif %}</b><span class="text-secondary"><b class="text-body">{{ o.porcentaje|floatformat:1 }} %</b> · {{ o.total|intcomma }}</span></div>
+      <div class="barra mt-1" role="img" aria-label="{{ o.nombre }}: {{ o.total }} votos"><div class="{% if forloop.first and o.total %}lider{% endif %}" style="width:{{ o.porcentaje|floatformat:0 }}%"></div></div></div>
+    {% empty %}<p class="text-secondary m-0">Esta votación no tiene opciones.</p>{% endfor %}
+  </section>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <p class="nota m-0">Visibilidad pública: <b>{{ votacion.get_visibilidad_display }}</b> <span class="pend">P-05</span> · Certificación antes de publicar <span class="pend">P-12</span></p>
+    <a class="btn btn-linea btn-sm" href="{% url 'panel:resultados_csv' votacion.pk %}">Exportar CSV</a>
+  </div>
+{% else %}
+  <div class="ejemplo">Aún no hay votaciones publicadas.</div>
+{% endif %}
+{% endblock %}

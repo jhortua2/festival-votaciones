@@ -1,0 +1,9 @@
+{% load festival %}{% with n=c.votaciones_publicas.count %}
+<a class="cat" href="{% url 'votaciones:categoria' c.pk %}">
+  <span class="cat-art" style="background:linear-gradient(135deg,{{ c.color }},#0D271E)">
+    {% icono c.icono %}
+    <span class="n">{{ n }} votaci{{ n|pluralize:"ón,ones" }}</span>
+  </span>
+  <span class="cat-body"><h3>{{ c.nombre }}</h3><p>{{ c.descripcion|default:"&nbsp;" }}</p></span>
+</a>
+{% endwith %}

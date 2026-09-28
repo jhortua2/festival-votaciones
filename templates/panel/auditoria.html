@@ -1,0 +1,10 @@
+{% extends "panel/base_panel.html" %}
+{% block titulo %}Auditoría{% endblock %}
+{% block panel %}
+<div><span class="eyebrow">RF-13 · RNF-09</span><h1 class="h3 fw-bold m-0">Auditoría</h1><p class="text-secondary m-0">Últimas 200 acciones. Los registros no se pueden editar ni borrar.</p></div>
+<div class="tabla-caja table-responsive"><table class="table tabla">
+  <thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Detalle</th><th>IP</th></tr></thead>
+  <tbody>{% for r in registros %}<tr><td class="text-nowrap">{{ r.fecha|date:"Y-m-d H:i:s" }}</td><td>{{ r.usuario.email|default:"sistema" }}</td><td><code>{{ r.accion }}</code></td><td>{{ r.detalle }}</td><td>{{ r.ip|default:"—" }}</td></tr>
+  {% empty %}<tr><td colspan="5" class="text-secondary">Sin registros.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block titulo %}Opciones · {{ votacion.nombre }}{% endblock %}
+{% block contenido %}
+<form method="get" action="{% url 'votaciones:confirmar' votacion.pk %}" id="f-opciones">
+<div class="container-lg pt-4 d-flex flex-column gap-3">
+  <a class="text-secondary text-decoration-none fw-semibold" href="{% url 'votaciones:detalle' votacion.pk %}">← Reglas de la votación</a>
+  <div><span class="eyebrow">{{ votacion.nombre }}</span><h1 class="h-display m-0" style="font-size:1.9rem">Escoge tu opción</h1>
+    <p class="text-secondary m-0">Toca una tarjeta para seleccionarla. Aún no se registra nada.</p></div>
+  {% if ya_voto %}<div class="alert alert-warning m-0">Ya votaste en esta votación{% if votacion.frecuencia == "diaria" %} hoy{% endif %}. Si intentas de nuevo, el sistema lo rechazará (RN-06).</div>{% endif %}
+  {% if not votacion.esta_abierta %}<div class="alert alert-info m-0">Puedes ver las opciones, pero la votación está {{ votacion.estado_etiqueta|lower }}.</div>{% endif %}
+  <div class="row g-3" role="radiogroup" aria-label="Opciones de la votación">
+    {% for o in opciones %}
+    <div class="col-12 col-sm-6 col-lg-3 position-relative">
+      <input class="op-input" type="radio" name="opcion" id="op-{{ o.pk }}" value="{{ o.pk }}" data-nombre="{{ o.nombre }}" {% if not votacion.esta_abierta %}disabled{% endif %}>
+      <label class="op" for="op-{{ o.pk }}">
+        <span class="thumb" style="background:linear-gradient(140deg,{{ o.color }},#0D271E)">{% if o.imagen %}<img src="{{ o.imagen.url }}" alt="">{% else %}<b>{{ o.inicial }}</b>{% endif %}<span class="franja"></span></span>
+        <span class="tick" aria-hidden="true">✓</span>
+        <span class="ob">{% if o.detalle %}<span class="aire align-self-start">{{ o.detalle }}</span>{% endif %}<h3>{{ o.nombre }}</h3>{% if o.descripcion %}<span class="sub">{{ o.descripcion }}</span>{% endif %}</span>
+      </label>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+<div class="votebar">
+  <div class="container-lg d-flex gap-3 align-items-center">
+    <div class="flex-grow-1 small text-secondary" style="min-width:0" id="sel-txt">Ninguna opción seleccionada</div>
+    <button class="btn btn-sol btn-lg" id="btn-votar" type="submit" disabled>Votar</button>
+  </div>
+</div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+  // Habilita "Votar" solo cuando hay una opción seleccionada
+  document.querySelectorAll('.op-input').forEach(function (r) {
+    r.addEventListener('change', function () {
+      document.getElementById('btn-votar').disabled = false;
+      document.getElementById('sel-txt').innerHTML = 'Seleccionaste<br><b class="text-body fs-6"></b>';
+      document.querySelector('#sel-txt b').textContent = r.dataset.nombre;
+    });
+  });
+</script>
+{% endblock %}

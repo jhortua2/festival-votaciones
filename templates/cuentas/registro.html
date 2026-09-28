@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block titulo %}Crear cuenta{% endblock %}
+{% block contenido %}
+<div class="container-lg py-4">
+  <div class="row g-4 align-items-stretch">
+    <div class="col-lg-6 d-none d-lg-block"><div class="auth-side h-100"><div class="franja"></div><h2 class="h-display">Tu voz también cuenta en la tarima.</h2><p class="m-0">Crea tu cuenta una sola vez y vota en las votaciones abiertas del Festival.</p></div></div>
+    <div class="col-lg-6">
+      <form method="post" class="mx-auto" style="max-width:460px" novalidate>
+        {% csrf_token %}
+        <h1 class="h-display mb-3" style="font-size:2rem">Crea tu cuenta</h1>
+        {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+        <div class="row g-0 gap-sm-2 flex-sm-nowrap">
+          <div class="col-sm">{% include "includes/campo.html" with campo=form.first_name %}</div>
+          <div class="col-sm">{% include "includes/campo.html" with campo=form.last_name %}</div>
+        </div>
+        {% include "includes/campo.html" with campo=form.email %}
+        {% include "includes/campo.html" with campo=form.password1 %}
+        {% include "includes/campo.html" with campo=form.password2 %}
+        {% include "includes/campo.html" with campo=form.acepto %}
+        <p class="nota">Política de tratamiento de datos de la Fundación: <span class="pend">pendiente de validación · P-08</span></p>
+        <button class="btn btn-sol btn-lg w-100" type="submit">Crear cuenta</button>
+        <p class="text-center text-secondary mt-3 mb-0">¿Ya tienes cuenta? <a href="{% url 'cuentas:login' %}">Inicia sesión</a></p>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

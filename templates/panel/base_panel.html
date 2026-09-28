@@ -1,0 +1,28 @@
+{% extends "base.html" %}{% load festival %}
+{% block barra %}
+<header class="adm-bar">
+  <div class="d-flex align-items-center gap-2 px-3 py-2">
+    <a class="brand" href="{% url 'panel:panel' %}"><span class="brand-mark">{% icono "acordeon" "#1A1405" "#F4B400" %}</span><span><b>Tu Voto Vallenato</b><small>Administración</small></span></a>
+    <span class="rol ms-1">Admin</span>
+    <div class="ms-auto d-flex gap-2 align-items-center">
+      <a class="btn btn-linea btn-sm" href="{% url 'votaciones:inicio' %}">Ver sitio</a>
+      <form method="post" action="{% url 'cuentas:logout' %}">{% csrf_token %}<button class="btn btn-linea btn-sm">Salir</button></form>
+    </div>
+  </div>
+</header>
+{% endblock %}
+{% block contenido %}
+<div class="adm-layout">
+  <nav class="adm-nav" aria-label="Administración">
+    <a href="{% url 'panel:panel' %}" class="{% if seccion == 'panel' %}on{% endif %}"><span class="dot"></span>Panel</a>
+    <a href="{% url 'panel:categorias' %}" class="{% if seccion == 'categorias' %}on{% endif %}"><span class="dot"></span>Categorías</a>
+    <a href="{% url 'panel:votaciones' %}" class="{% if seccion == 'votaciones' %}on{% endif %}"><span class="dot"></span>Votaciones y opciones</a>
+    <a href="{% url 'panel:resultados' %}" class="{% if seccion == 'resultados' %}on{% endif %}"><span class="dot"></span>Resultados</a>
+    <a href="{% url 'panel:auditoria' %}" class="{% if seccion == 'auditoria' %}on{% endif %}"><span class="dot"></span>Auditoría</a>
+  </nav>
+  <div class="adm-main p-3 p-lg-4 d-flex flex-column gap-3">
+    {% block panel %}{% endblock %}
+  </div>
+</div>
+{% endblock %}
+{% block pie %}{% endblock %}

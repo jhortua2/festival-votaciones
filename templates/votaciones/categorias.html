@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block titulo %}Categorías{% endblock %}
+{% block contenido %}
+<div class="container-lg py-4 d-flex flex-column gap-3">
+  <nav class="small text-secondary">{{ edicion_actual.nombre|default:"Festival" }} › <b class="text-body">Categorías</b></nav>
+  <div><h1 class="h-display m-0" style="font-size:2rem">Categorías</h1><p class="text-secondary m-0">Elige una categoría para ver sus votaciones.</p></div>
+  <div class="row g-3">
+    {% for c in categorias %}<div class="col-12 col-sm-6 col-lg-4">{% include "includes/tarjeta_categoria.html" %}</div>
+    {% empty %}<div class="col-12"><div class="ejemplo">Aún no hay categorías publicadas.</div></div>{% endfor %}
+  </div>
+</div>
+{% endblock %}
