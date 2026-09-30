@@ -4,6 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{% block titulo %}Tu Voto Vallenato{% endblock %} · Festival 2027</title>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="icon" href="{% static 'img/favicon-32.png' %}" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
+  <meta name="theme-color" content="#0D271E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap">
@@ -15,7 +19,7 @@
 <header class="appbar">
   <div class="container-lg d-flex align-items-center gap-3 py-2">
     <a class="brand" href="{% url 'votaciones:inicio' %}" aria-label="Ir al inicio">
-      <span class="brand-mark">{% icono "acordeon" "#1A1405" "#F4B400" %}</span>
+      <img class="brand-mark" src="{% static 'img/favicon.svg' %}" width="36" height="36" alt="">
       <span><b>Tu Voto Vallenato</b><small>{{ edicion_actual.nombre|default:"Festival 2027"|truncatechars:34 }}</small></span>
     </a>
     <nav class="d-none d-md-flex nav gap-1 ms-3" aria-label="Principal">

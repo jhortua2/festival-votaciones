@@ -1,8 +1,8 @@
-{% extends "base.html" %}{% load festival %}
+{% extends "base.html" %}{% load static festival %}
 {% block barra %}
 <header class="adm-bar">
   <div class="d-flex align-items-center gap-2 px-3 py-2">
-    <a class="brand" href="{% url 'panel:panel' %}"><span class="brand-mark">{% icono "acordeon" "#1A1405" "#F4B400" %}</span><span><b>Tu Voto Vallenato</b><small>Administración</small></span></a>
+    <a class="brand" href="{% url 'panel:panel' %}"><img class="brand-mark" src="{% static 'img/favicon.svg' %}" width="36" height="36" alt=""><span><b>Tu Voto Vallenato</b><small>Administración</small></span></a>
     <span class="rol ms-1">Admin</span>
     <div class="ms-auto d-flex gap-2 align-items-center">
       <a class="btn btn-linea btn-sm" href="{% url 'votaciones:inicio' %}">Ver sitio</a>
