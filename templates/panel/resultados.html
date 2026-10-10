@@ -12,17 +12,30 @@
 {% if votacion %}
   {% if votacion.estado == "abierta" %}<div><span class="pill pill-proxima">Parciales · votación abierta</span></div>{% endif %}
   <div class="row g-2">
-    <div class="col-6 col-lg-3"><div class="kpi"><small>Total de votos</small><b>{{ total|intcomma }}</b></div></div>
-    <div class="col-6 col-lg-3"><div class="kpi"><small>Opciones</small><b>{{ filas|length }}</b></div></div>
+    <div class="col-6 col-lg-3"><div class="kpi"><small>Votos del público</small><b>{{ total|intcomma }}</b></div></div>
+    <div class="col-6 col-lg-3"><div class="kpi"><small>Jurados que calificaron</small><b>{% if votacion.tiene_jurado %}{{ n_calif }}/{{ n_jurados }}{% else %}—{% endif %}</b></div></div>
     <div class="col-6 col-lg-3"><div class="kpi"><small>Votos rechazados</small><b>{{ rechazados|intcomma }}</b></div></div>
     <div class="col-6 col-lg-3"><div class="kpi"><small>Estado</small><b style="font-size:1.25rem">{{ votacion.estado_etiqueta }}</b></div></div>
   </div>
+  <section class="panel-caja d-flex flex-column gap-2">
+    <div class="d-flex justify-content-between flex-wrap gap-2"><h2 class="h6 fw-bold m-0">Cómo se calcula</h2><span class="nota">{{ votacion.modalidad }} <span class="pend">RN-11 · P-06</span></span></div>
+    <div class="peso" role="img" aria-label="Jurado {{ votacion.peso_jurado }} por ciento, público {{ votacion.peso_publico }} por ciento"><div class="j" style="width:{{ votacion.peso_jurado }}%"></div><div class="p" style="width:{{ votacion.peso_publico }}%"></div></div>
+    <p class="nota m-0">Resultado final = {{ votacion.peso_jurado }} % × participación en los puntajes del jurado + {{ votacion.peso_publico }} % × participación en los votos del público.</p>
+  </section>
   <section class="panel-caja d-flex flex-column gap-3">
-    <h2 class="h6 fw-bold m-0">Votos por opción</h2>
+    <div class="d-flex justify-content-between flex-wrap gap-2"><h2 class="h6 fw-bold m-0">Resultado por opción</h2>
+      <div class="leyenda-peso"><span><i style="background:var(--sol)"></i>Jurado</span><span><i style="background:var(--rio)"></i>Público</span></div></div>
     {% for o in filas %}
-      <div><div class="d-flex justify-content-between gap-2"><b>{{ o.nombre }}{% if not o.activa %} <span class="pill pill-inactiva">Inactiva</span>{% endif %}</b><span class="text-secondary"><b class="text-body">{{ o.porcentaje|floatformat:1 }} %</b> · {{ o.total|intcomma }}</span></div>
-      <div class="barra mt-1" role="img" aria-label="{{ o.nombre }}: {{ o.total }} votos"><div class="{% if forloop.first and o.total %}lider{% endif %}" style="width:{{ o.porcentaje|floatformat:0 }}%"></div></div></div>
+      <div>
+        <div class="d-flex justify-content-between gap-2 flex-wrap"><b>{% if forloop.first and o.final %}🏆 {% endif %}{{ o.nombre }}{% if not o.activa %} <span class="pill pill-inactiva">Inactiva</span>{% endif %}</b><span class="text-body fw-bold">{{ o.final|floatformat:1 }} %</span></div>
+        <div class="barra apilada mt-1" role="img" aria-label="{{ o.nombre }}: resultado final {{ o.final|floatformat:1 }} por ciento"><div class="j" style="width:{{ o.aporte_jurado|stringformat:'.2f' }}%"></div><div class="p" style="width:{{ o.aporte_publico|stringformat:'.2f' }}%"></div></div>
+        <div class="d-flex flex-wrap gap-3 nota mt-1">
+          {% if votacion.tiene_jurado %}<span>Jurado: {% if o.promedio is not None %}promedio <b class="text-body">{{ o.promedio|floatformat:1 }}</b>/{{ votacion.escala_maxima }} · {{ o.pct_jurado|floatformat:1 }} %{% else %}sin calificaciones{% endif %}</span>{% endif %}
+          {% if votacion.tiene_publico %}<span>Público: <b class="text-body">{{ o.n_votos|intcomma }}</b> votos · {{ o.pct_publico|floatformat:1 }} %</span>{% endif %}
+        </div>
+      </div>
     {% empty %}<p class="text-secondary m-0">Esta votación no tiene opciones.</p>{% endfor %}
+    {% if votacion.tiene_jurado and faltan %}<div class="ejemplo">Faltan {{ faltan }} jurado{{ faltan|pluralize }} por calificar: el resultado puede cambiar.</div>{% endif %}
   </section>
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
     <p class="nota m-0">Visibilidad pública: <b>{{ votacion.get_visibilidad_display }}</b> <span class="pend">P-05</span> · Certificación antes de publicar <span class="pend">P-12</span></p>

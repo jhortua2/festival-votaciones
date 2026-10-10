@@ -58,6 +58,7 @@ def votacion_detalle(request, pk):
         "votacion": votacion,
         "ya_voto": ya_voto(request.user, votacion),
         "n_opciones": votacion.opciones_activas().count(),
+        "es_jurado_aqui": request.user.is_authenticated and votacion.jurados.filter(pk=request.user.pk).exists(),
     }
     if votacion.resultados_publicos():
         contexto["resultados"], contexto["total"] = votacion.conteo()

@@ -1,0 +1,23 @@
+{% extends "panel/base_panel.html" %}
+{% block titulo %}Jurados{% endblock %}
+{% block panel %}
+<div><span class="eyebrow">{{ edicion_actual.nombre }}</span><h1 class="h3 fw-bold m-0">Jurados</h1></div>
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="tabla-caja table-responsive"><table class="table tabla">
+      <thead><tr><th>Jurado</th><th>Correo</th><th class="num">Asignadas</th><th class="num">Calificadas</th></tr></thead>
+      <tbody>{% for j in jurados %}
+        <tr><td><b>{{ j.get_full_name|default:j.email }}</b></td><td class="nota">{{ j.email }}</td><td class="num">{{ j.n_asignadas }}</td><td class="num">{{ j.n_calif }}</td></tr>
+      {% empty %}<tr><td colspan="4" class="text-secondary">Aún no hay jurados. Crea el primero.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </div>
+  <div class="col-lg-5">
+    <form method="post" class="panel-caja" novalidate>{% csrf_token %}
+      <h2 class="h6 fw-bold">Nuevo jurado</h2>
+      {% for campo in form %}{% include "includes/campo.html" %}{% endfor %}
+      <button class="btn btn-sol" type="submit">Crear jurado</button>
+      <p class="nota mt-2 mb-0">Después asígnalo en <b>Votaciones → Editar</b>. Cuántos jurados habrá y quién los designa: pendiente de validación <span class="pend">P-17</span></p>
+    </form>
+  </div>
+</div>
+{% endblock %}

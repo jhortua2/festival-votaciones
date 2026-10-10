@@ -1,10 +1,10 @@
-"""Panel de administración de la Fundación (pantallas 10 a 14 · CU-05 a CU-08)."""
+"""Panel de administración de la Fundación (pantallas 10 a 14 y 17 · CU-05 a CU-08 y CU-10)."""
 import csv
 from functools import wraps
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -14,8 +14,8 @@ from auditoria.models import Registro
 from auditoria.servicios import registrar
 from cuentas.models import Usuario
 
-from .forms_panel import CategoriaForm, JustificacionForm, OpcionForm, VotacionForm
-from .models import Categoria, Edicion, Opcion, Votacion, Voto
+from .forms_panel import CategoriaForm, JuradoForm, JustificacionForm, OpcionForm, VotacionForm
+from .models import Calificacion, Categoria, Edicion, Opcion, Votacion, Voto
 
 
 def solo_admin(vista):
@@ -131,6 +131,8 @@ def votacion_publicar(request, pk):
     v = get_object_or_404(Votacion, pk=pk)
     if not v.puede_publicarse():
         messages.error(request, "No se puede publicar: agrega mínimo 2 opciones activas (RN-07).")
+    elif v.tiene_jurado and not v.jurados.exists():
+        messages.error(request, "No se puede publicar: la votación lleva calificación del jurado y no tiene jurados asignados (RN-13).")
     else:
         v.publicada = True
         v.save(update_fields=["publicada"])
@@ -225,6 +227,25 @@ def opcion_eliminar(request, pk):
     return redirect("panel:opciones", pk=o.votacion_id)
 
 
+# ---------------------------------------------------------------- 17. Jurados
+@solo_admin
+def jurados(request):
+    """CU-10: la Fundación crea las cuentas de los jurados y ve su avance."""
+    form = JuradoForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        d = form.cleaned_data
+        j = Usuario.objects.create_user(username=d["email"], email=d["email"], password=d["password"],
+                                        first_name=d["first_name"], last_name=d["last_name"], rol=Usuario.Rol.JURADO)
+        registrar(request, "jurado_creado", j.email)
+        messages.success(request, f"Jurado {j.get_full_name()} creado. Asígnalo en «Editar» de cada votación.")
+        return redirect("panel:jurados")
+    lista = (Usuario.objects.filter(rol=Usuario.Rol.JURADO)
+             .annotate(n_asignadas=Count("votaciones_como_jurado", distinct=True),
+                       n_calif=Count("calificaciones__votacion", distinct=True))
+             .order_by("first_name"))
+    return render(request, "panel/jurados.html", {"seccion": "jurados", "jurados": lista, "form": form})
+
+
 # ---------------------------------------------------------------- 14. Resultados
 @solo_admin
 def resultados(request, pk=None):
@@ -233,7 +254,10 @@ def resultados(request, pk=None):
     v = get_object_or_404(todas, pk=pk) if pk else todas.first()
     contexto = {"seccion": "resultados", "todas": todas, "votacion": v}
     if v:
-        contexto["filas"], contexto["total"] = v.conteo()
+        contexto["filas"], contexto["total"] = v.resultados_ponderados()
+        contexto["n_calif"] = Calificacion.objects.filter(votacion=v).values("jurado").distinct().count()
+        contexto["n_jurados"] = v.jurados.count()
+        contexto["faltan"] = max(contexto["n_jurados"] - contexto["n_calif"], 0)
         contexto["rechazados"] = Registro.objects.filter(accion="voto_rechazado", detalle__startswith=v.nombre).count()
         registrar(request, "resultados_consultados", v.nombre)
     return render(request, "panel/resultados.html", contexto)
@@ -242,7 +266,7 @@ def resultados(request, pk=None):
 @solo_admin
 def resultados_csv(request, pk):
     v = get_object_or_404(Votacion, pk=pk)
-    filas, total = v.conteo()
+    filas, total = v.resultados_ponderados()
     registrar(request, "resultados_exportados", f"{v.nombre} (CSV)")
     respuesta = HttpResponse(content_type="text/csv; charset=utf-8")
     respuesta["Content-Disposition"] = f'attachment; filename="resultados-votacion-{v.pk}.csv"'
@@ -251,11 +275,13 @@ def resultados_csv(request, pk):
     w.writerow(["Votación", v.nombre])
     w.writerow(["Estado", v.estado_etiqueta])
     w.writerow(["Generado", timezone.localtime().strftime("%Y-%m-%d %H:%M")])
+    w.writerow(["Ponderación", f"Jurado {v.peso_jurado} % / Público {v.peso_publico} %"])
     w.writerow([])
-    w.writerow(["Opción", "Votos", "Porcentaje"])
+    c = lambda x: f"{x:.1f}".replace(".", ",")
+    w.writerow(["Opción", "Votos del público", "% público", "Promedio jurado", "% jurado", "Resultado final %"])
     for o in filas:
-        w.writerow([o.nombre, o.total, f"{o.porcentaje:.1f}".replace(".", ",")])
-    w.writerow(["TOTAL", total, "100"])
+        w.writerow([o.nombre, o.n_votos, c(o.pct_publico), c(o.promedio) if o.promedio is not None else "", c(o.pct_jurado), c(o.final)])
+    w.writerow(["TOTAL", total, "100", "", "100", "100"])
     return respuesta
 
 

@@ -4,6 +4,29 @@ Proyecto de la asignatura **Desarrollo Web**. Es una propuesta de sistema de vot
 
 > Todas las categorías, votaciones y opciones que trae el proyecto son **ejemplos ilustrativos**. El cliente no las ha aprobado. Las reglas que siguen pendientes de validación (frecuencia de voto, visibilidad de resultados, identificación del votante) quedaron **configurables**, no fijas en el código.
 
+
+> ## ⚡ Inicio rápido (para cada día de trabajo)
+>
+> **Doble clic en `iniciar.bat`**, o en la terminal dentro de esta carpeta:
+>
+> ```
+> python manage.py runserver 8888
+> ```
+>
+> | | URL |
+> |---|---|
+> | 🌐 Sitio público | http://localhost:8888 |
+> | 🛠️ Panel de la Fundación | http://localhost:8888/panel/ |
+> | 🗄️ Admin de Django (ver tablas) | http://localhost:8888/django-admin/ |
+>
+> | Rol | Correo | Contraseña |
+> |---|---|---|
+> | Administrador | `admin@festival.test` | `Festival2027!` |
+> | Votante | `ana@festival.test` | `Vallenato2027!` |
+> | Jurado | `jurado1@festival.test` (también `jurado2@` y `jurado3@`) | `Jurado2027!` |
+>
+> Apagar el servidor: **Ctrl + C** · Subir cambios: `git add .` → `git commit -m "..."` → `git push`
+
 ---
 
 ## 1. Qué necesita instalar (una sola vez)
@@ -62,21 +85,23 @@ python manage.py cargar_demo
 ## 5. Arrancar el servidor
 
 ```bash
-python manage.py runserver
+python manage.py runserver 8888
 ```
 
-Abra **http://127.0.0.1:8000/** en el navegador.
+Abra **http://localhost:8888** en el navegador (o haga doble clic en `iniciar.bat`).
 
 | Rol | Correo | Contraseña |
 |---|---|---|
 | Administrador | `admin@festival.test` | `Festival2027!` |
 | Votante | `ana@festival.test` | `Vallenato2027!` |
+| Jurado | `jurado1@festival.test` (también `jurado2@` y `jurado3@`) | `Jurado2027!` |
 
-- Sitio público: http://127.0.0.1:8000/
-- Panel de administración de la Fundación: http://127.0.0.1:8000/panel/
-- Admin técnico de Django (solo superusuario): http://127.0.0.1:8000/django-admin/
+- Sitio público: http://localhost:8888/
+- Panel de administración de la Fundación: http://localhost:8888/panel/
+- Panel del jurado: http://localhost:8888/jurado/
+- Admin técnico de Django (solo superusuario): http://localhost:8888/django-admin/
 
-Para detener el servidor: `Ctrl + C`. Cada vez que vuelva a trabajar, active el entorno (`venv\Scripts\activate`) y ejecute `python manage.py runserver`.
+Para detener el servidor: `Ctrl + C`. Cada vez que vuelva a trabajar, active el entorno (`venv\Scripts\activate`) y ejecute `python manage.py runserver 8888`.
 
 Para empezar desde cero con los datos de ejemplo: `python manage.py cargar_demo --reiniciar`
 
@@ -90,7 +115,7 @@ Si todavía no tiene MySQL, en el archivo `.env` cambie `DB_ENGINE=mysql` por `D
 python manage.py test
 ```
 
-Son 19 pruebas de las reglas del voto: un voto por persona, voto diario, votación cerrada, opción inactiva, restricción única en la base de datos, publicar solo con 2 opciones o más, permisos del panel, registro, inicio de sesión y exportación CSV.
+Son 34 pruebas. Las del voto: un voto por persona, voto diario, votación cerrada, opción inactiva, restricción única en la base de datos, publicar solo con 2 opciones o más, permisos del panel, registro, inicio de sesión y exportación CSV. Las del jurado: calificar todas las opciones, no calificar dos veces, solo jurados asignados, escala 1 a 10, el jurado no vota como público, votaciones solo de jurado y el cálculo ponderado 70/30.
 
 ---
 
@@ -131,7 +156,10 @@ festival-votaciones/
 | 11 | Gestión de categorías | `/panel/categorias/` |
 | 12 | Gestión de votaciones | `/panel/votaciones/` |
 | 13 | Gestión de opciones | `/panel/votaciones/<id>/opciones/` |
-| 14 | Resultados | `/panel/resultados/` |
+| 14 | Resultados (jurado + público) | `/panel/resultados/` |
+| 15 | Panel del jurado | `/jurado/` |
+| 16 | Calificar participantes | `/jurado/votaciones/<id>/` |
+| 17 | Gestión de jurados | `/panel/jurados/` |
 | + | Mis votos | `/cuentas/mis-votos/` |
 | + | Auditoría | `/panel/auditoria/` |
 
@@ -147,6 +175,10 @@ festival-votaciones/
 | RN-07 Mínimo 2 opciones para publicar | `Votacion.puede_publicarse()` |
 | RN-08 Opción con votos no se elimina | `views_panel.opcion_eliminar` / inactivar con justificación |
 | RN-10 Visibilidad de resultados *(pendiente)* | Campo `visibilidad` por votación |
+| RN-11 Resultado = jurado + público *(propuesta 70/30, pendiente)* | Campo `peso_jurado` por votación y `Votacion.resultados_ponderados()` |
+| RN-13 Solo califican los jurados asignados | Campo `jurados` de la votación; `servicios.calificar` |
+| RN-14 Una calificación por jurado y opción, sin cambios | Restricción única `(jurado, opcion)` en MySQL; sin vista de edición |
+| RN-15 El jurado no vota como público en su votación | `servicios.emitir_voto` |
 | CHECK cierre > apertura | Restricción `cierre_posterior_apertura` en la base de datos |
 
 ## 9. Problemas comunes
@@ -159,7 +191,7 @@ festival-votaciones/
 | `MariaDB 10.5 or later is required` | Está usando XAMPP. Vea la advertencia de la sección 1 |
 | `'python' no se reconoce como un comando` | Reinstale Python marcando "Add python.exe to PATH" |
 | `No module named 'django'` | Falta activar el entorno: `venv\Scripts\activate` |
-| Se ve sin estilos | Revise que abrió `http://127.0.0.1:8000` y no el archivo HTML directamente |
+| Se ve sin estilos | Revise que abrió `http://localhost:8888` y no el archivo HTML directamente |
 
 ## 10. Pendiente para las próximas entregas
 

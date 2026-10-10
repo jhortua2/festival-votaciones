@@ -39,6 +39,8 @@ class Ingreso(auth_views.LoginView):
             return destino
         if self.request.user.es_admin:
             return "/panel/"
+        if self.request.user.es_jurado:
+            return "/jurado/"
         return "/"
 
 

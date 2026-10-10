@@ -8,7 +8,7 @@
   {% if form.non_field_errors %}<div class="alert alert-danger">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>{% endif %}
   <div class="row g-2">
     {% for campo in form %}
-      <div class="{% if campo.name == 'descripcion' or campo.name == 'nombre' or campo.name == 'justificacion' %}col-12{% else %}col-md-6{% endif %}">{% include "includes/campo.html" %}</div>
+      <div class="{% if campo.name == 'descripcion' or campo.name == 'nombre' or campo.name == 'justificacion' or campo.name == 'jurados' %}col-12{% else %}col-md-6{% endif %}">{% include "includes/campo.html" %}</div>
     {% endfor %}
   </div>
   {% if nota %}<p class="nota">{{ nota }}</p>{% endif %}

@@ -17,6 +17,7 @@
     <a href="{% url 'panel:panel' %}" class="{% if seccion == 'panel' %}on{% endif %}"><span class="dot"></span>Panel</a>
     <a href="{% url 'panel:categorias' %}" class="{% if seccion == 'categorias' %}on{% endif %}"><span class="dot"></span>Categorías</a>
     <a href="{% url 'panel:votaciones' %}" class="{% if seccion == 'votaciones' %}on{% endif %}"><span class="dot"></span>Votaciones y opciones</a>
+    <a href="{% url 'panel:jurados' %}" class="{% if seccion == 'jurados' %}on{% endif %}"><span class="dot"></span>Jurados</a>
     <a href="{% url 'panel:resultados' %}" class="{% if seccion == 'resultados' %}on{% endif %}"><span class="dot"></span>Resultados</a>
     <a href="{% url 'panel:auditoria' %}" class="{% if seccion == 'auditoria' %}on{% endif %}"><span class="dot"></span>Auditoría</a>
   </nav>

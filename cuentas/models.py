@@ -12,6 +12,7 @@ class Usuario(AbstractUser):
 
     class Rol(models.TextChoices):
         VOTANTE = "votante", "Votante"
+        JURADO = "jurado", "Jurado"
         ADMIN = "admin", "Administrador"
 
     email = models.EmailField("correo electrónico", unique=True)
@@ -30,6 +31,10 @@ class Usuario(AbstractUser):
     @property
     def es_admin(self) -> bool:
         return self.rol == self.Rol.ADMIN or self.is_superuser
+
+    @property
+    def es_jurado(self) -> bool:
+        return self.rol == self.Rol.JURADO
 
     def __str__(self):
         return self.get_full_name() or self.email or self.username

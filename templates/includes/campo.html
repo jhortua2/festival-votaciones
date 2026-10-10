@@ -1,5 +1,8 @@
 <div class="mb-3">
-  {% if campo.field.widget.input_type == "checkbox" %}
+  {% if campo.name == "jurados" %}
+    <span class="form-label d-block">{{ campo.label|capfirst }}</span>
+    <div class="d-flex flex-wrap gap-3">{% for c in campo %}<div class="form-check">{{ c.tag }}<label class="form-check-label" for="{{ c.id_for_label }}">{{ c.choice_label }}</label></div>{% empty %}<span class="nota">No hay jurados creados todavía.</span>{% endfor %}</div>
+  {% elif campo.field.widget.input_type == "checkbox" %}
     <div class="form-check">
       {{ campo }}
       <label class="form-check-label small text-secondary" for="{{ campo.id_for_label }}">{{ campo.label }}</label>

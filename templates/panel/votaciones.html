@@ -11,7 +11,7 @@
     <tr>
       <td><b>{{ v.nombre }}</b><br><span class="nota">{{ v.apertura|date:"j M H:i" }} → {{ v.cierre|date:"j M Y H:i" }}</span></td>
       <td>{{ v.categoria.nombre }}</td>
-      <td class="nota">{{ v.get_frecuencia_display }}<br>{{ v.get_visibilidad_display }}</td>
+      <td class="nota">{{ v.modalidad }}<br>{{ v.get_frecuencia_display }}<br>{{ v.get_visibilidad_display }}</td>
       <td class="num">{{ v.n_ops }}</td><td class="num">{{ v.n_votos|intcomma }}</td>
       <td><span class="{{ v.estado|pill }}">{{ v.estado_etiqueta }}</span></td>
       <td><div class="d-flex gap-1 flex-wrap">

@@ -1,0 +1,38 @@
+{% extends "base.html" %}{% load festival %}
+{% block titulo %}Calificar · {{ votacion.nombre }}{% endblock %}
+{% block contenido %}
+<div class="container-lg py-4 d-flex flex-column gap-3">
+  <a class="text-secondary text-decoration-none fw-semibold" href="{% url 'jurado:inicio' %}">← Votaciones asignadas</a>
+  <div>
+    <span class="eyebrow">{{ votacion.categoria.nombre }} · {{ votacion.modalidad }}</span>
+    <h1 class="h-display m-0" style="font-size:1.9rem">{{ votacion.nombre }}</h1>
+    <p class="text-secondary m-0">{% if ya_califico %}Esta es la calificación que enviaste.{% else %}Califica cada opción de 1 a {{ votacion.escala_maxima }}. Revisa bien: después de enviarla no se puede cambiar.{% endif %}</p>
+  </div>
+  {% if error %}<div class="alert alert-danger m-0">{{ error }}</div>{% endif %}
+  {% if not ya_califico and not votacion.esta_abierta %}<div class="alert alert-info m-0">La votación está {{ votacion.estado_etiqueta|lower }}. Solo se califica mientras está abierta.</div>{% endif %}
+  <form method="post" class="d-flex flex-column gap-2">{% csrf_token %}
+    {% for o in opciones %}
+      <fieldset class="jur-card flex-column align-items-stretch" {% if ya_califico or not votacion.esta_abierta %}disabled{% endif %}>
+        <legend class="d-flex gap-3 align-items-center m-0" style="font-size:1rem">
+          {% include "includes/miniatura.html" with clase="" %}
+          <span><b class="d-block">{{ o.nombre }}</b>{% if o.detalle %}<span class="nota">{{ o.detalle }}</span>{% endif %}</span>
+          {% if o.previa %}<span class="ms-auto nota-final">{{ o.previa.puntaje }}</span>{% endif %}
+        </legend>
+        {% if not o.previa %}
+        <div class="escala" role="radiogroup" aria-label="Puntaje para {{ o.nombre }}">
+          {% for n in escala %}
+            <input type="radio" id="p{{ o.pk }}-{{ n }}" name="puntaje_{{ o.pk }}" value="{{ n }}" {% if o.elegido|add:0 == n %}checked{% endif %} required>
+            <label for="p{{ o.pk }}-{{ n }}">{{ n }}</label>
+          {% endfor %}
+        </div>
+        <input class="form-control form-control-sm" name="comentario_{{ o.pk }}" maxlength="255" placeholder="Comentario opcional">
+        {% elif o.previa.comentario %}<p class="nota m-0">“{{ o.previa.comentario }}”</p>{% endif %}
+      </fieldset>
+    {% endfor %}
+    {% if not ya_califico and votacion.esta_abierta %}
+      <button class="btn btn-sol btn-lg align-self-start" type="submit">Enviar calificación</button>
+    {% endif %}
+  </form>
+  <p class="nota m-0">Tu calificación pesa el {{ votacion.peso_jurado }} % del resultado final; el voto del público, el {{ votacion.peso_publico }} %. <span class="pend">P-06</span></p>
+</div>
+{% endblock %}

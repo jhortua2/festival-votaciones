@@ -14,10 +14,13 @@ from django.utils import timezone
 
 from auditoria.models import Registro
 from cuentas.models import Usuario
-from votaciones.models import Categoria, Edicion, Opcion, Votacion, Voto
+from votaciones.models import Calificacion, Categoria, Edicion, Opcion, Votacion, Voto
 
 ADMIN = ("admin@festival.test", "Festival2027!")
 VOTANTE = ("ana@festival.test", "Vallenato2027!")
+JURADOS = [("jurado1@festival.test", "Rafael", "Calderón"), ("jurado2@festival.test", "Leandro", "Mejía"),
+           ("jurado3@festival.test", "Rosa", "Ochoa")]
+CLAVE_JURADO = "Jurado2027!"
 
 
 class Command(BaseCommand):
@@ -30,6 +33,7 @@ class Command(BaseCommand):
     @transaction.atomic
     def handle(self, *args, reiniciar=False, votantes=60, **opts):
         if reiniciar:
+            Calificacion.objects.all().delete()
             Voto.objects.all().delete()
             Opcion.objects.all().delete()
             Votacion.objects.all().delete()
@@ -59,6 +63,15 @@ class Command(BaseCommand):
         })
         ana.set_password(VOTANTE[1]); ana.save()
 
+        jurados = []
+        for correo, nombre, apellido in JURADOS:
+            j, _ = Usuario.objects.get_or_create(email=correo, defaults={
+                "username": correo, "first_name": nombre, "last_name": apellido, "rol": Usuario.Rol.JURADO,
+                "acepto_tratamiento_datos": True,
+            })
+            j.set_password(CLAVE_JURADO); j.save()
+            jurados.append(j)
+
         ed = Edicion.objects.create(anio=2027, numero=60, nombre="Festival de la Leyenda Vallenata 2027", activa=True)
 
         musica = Categoria.objects.create(edicion=ed, nombre="Música", descripcion="Canciones y presentaciones en tarima", orden=1, icono="acordeon", color="#F4B400")
@@ -66,23 +79,29 @@ class Command(BaseCommand):
         publico = Categoria.objects.create(edicion=ed, nombre="Reconocimientos del público", descripcion="Vestuario, ambiente y otros", orden=3, icono="sombrero", color="#35B2A1")
 
         V, F = Votacion.Visibilidad, Votacion.Frecuencia
-        cancion = self._votacion(musica, "Canción favorita del público", "Escoge la canción inédita que más te llegó al corazón. Es un reconocimiento del público; no reemplaza el fallo del jurado.",
+        cancion = self._votacion(musica, "Mejor canción inédita", "Escoge la canción inédita que más te llegó al corazón. El resultado combina la calificación del jurado (70 %) y el voto del público (30 %).",
                                  ahora - dia, ahora + 3 * dia, F.UNA_VEZ, V.SOLO_ADMIN, [
                                      ("Brisa del Guatapurí", "Paseo", "#F4B400"), ("Pilón de mi tierra", "Merengue", "#E23D32"),
                                      ("Sabana de sol", "Son", "#35B2A1"), ("Puya pa' la plaza", "Puya", "#7A5CFF")])
-        aire = self._votacion(musica, "Tu aire favorito", "¿Cuál de los cuatro aires te pone a bailar? Puedes votar una vez al día.",
+        aire = self._votacion(musica, "Tu aire favorito", "¿Cuál de los cuatro aires te pone a bailar? Puedes votar una vez al día. Es solo del público.",
                               ahora - 2 * dia, ahora + 4 * dia, F.DIARIA, V.TIEMPO_REAL, [
                                   ("Paseo", "Aire", "#F4B400"), ("Merengue", "Aire", "#E23D32"), ("Son", "Aire", "#35B2A1"), ("Puya", "Aire", "#7A5CFF")])
         self._votacion(musica, "Mejor presentación en tarima", "Se abrirá durante las rondas finales.",
                        ahora + 5 * dia, ahora + 8 * dia, F.UNA_VEZ, V.AL_CIERRE, [
                            ("Conjunto inscrito #03", "Tarima Francisco el Hombre", "#F4B400"), ("Conjunto inscrito #11", "Tarima Francisco el Hombre", "#E23D32"),
                            ("Conjunto inscrito #24", "Tarima Francisco el Hombre", "#35B2A1")])
-        piloneras = self._votacion(pilon, "Grupo de piloneras favorito", "Votación de ejemplo ya cerrada, con resultados públicos al cierre.",
+        piloneras = self._votacion(pilon, "Grupo de piloneras favorito", "Votación de ejemplo ya cerrada: jurado 70 % + público 30 %, con resultados públicos al cierre.",
                                    ahora - 10 * dia, ahora - 2 * dia, F.UNA_VEZ, V.AL_CIERRE, [
                                        ("Grupo Mayores A", "Categoría mayores", "#E23D32"), ("Grupo Juvenil B", "Categoría juvenil", "#F4B400"),
                                        ("Grupo Infantil C", "Categoría infantil", "#35B2A1")])
         borrador = Votacion.objects.create(categoria=publico, nombre="Vestuario más colorido", descripcion="Borrador: falta agregar opciones.",
-                                           apertura=ahora + 6 * dia, cierre=ahora + 9 * dia)
+                                           apertura=ahora + 6 * dia, cierre=ahora + 9 * dia, peso_jurado=0)
+
+        # Ponderación (RN-11): propuesta 70/30 en las votaciones con jurado; "Tu aire favorito" es solo del público.
+        aire.peso_jurado = 0
+        aire.save(update_fields=["peso_jurado"])
+        for v in Votacion.objects.filter(peso_jurado__gt=0):
+            v.jurados.set(jurados)
         Opcion.objects.create(votacion=borrador, nombre="Comparsa de ejemplo", detalle="Desfile", color="#35B2A1")
 
         # Votantes de prueba y votos (bypass del servicio solo para sembrar datos)
@@ -97,8 +116,13 @@ class Command(BaseCommand):
         self._sembrar(aire, usuarios, [4, 3, 2, 3], ahora)
         self._sembrar(piloneras, usuarios, [3, 5, 2], piloneras.cierre - dia)
 
+        # Calificaciones del jurado (bypass del servicio solo para sembrar datos).
+        # En "Canción favorita" falta un jurado por calificar, para mostrar resultados parciales.
+        self._calificar(cancion, jurados[:2], [[7, 9, 8, 6], [6, 9, 7, 5]], ahora)
+        self._calificar(piloneras, jurados, [[8, 7, 9], [9, 6, 9], [8, 7, 10]], piloneras.cierre - dia)
+
         Registro.objects.create(usuario=admin, accion="datos_demo", detalle="Carga de datos de ejemplo")
-        self.stdout.write(self.style.SUCCESS(f"Datos de ejemplo cargados: 3 categorías, 5 votaciones, {Voto.objects.count()} votos."))
+        self.stdout.write(self.style.SUCCESS(f"Datos de ejemplo cargados: 3 categorías, 5 votaciones, {Voto.objects.count()} votos, {len(jurados)} jurados y {Calificacion.objects.count()} calificaciones."))
         self._credenciales()
 
     def _votacion(self, cat, nombre, desc, apertura, cierre, frecuencia, visibilidad, opciones):
@@ -118,8 +142,17 @@ class Command(BaseCommand):
             for u in votantes
         ])
 
+    def _calificar(self, votacion, jurados, tablas, momento):
+        opciones = list(votacion.opciones.order_by("orden"))
+        Calificacion.objects.bulk_create([
+            Calificacion(jurado=j, votacion=votacion, opcion=o, puntaje=p, fecha=momento)
+            for j, puntajes in zip(jurados, tablas) for o, p in zip(opciones, puntajes)
+        ])
+
     def _credenciales(self):
         self.stdout.write("")
         self.stdout.write("  Administrador:  " + ADMIN[0] + "  /  " + ADMIN[1])
         self.stdout.write("  Votante:        " + VOTANTE[0] + "  /  " + VOTANTE[1])
-        self.stdout.write("  Abra http://127.0.0.1:8000/  (panel: http://127.0.0.1:8000/panel/)")
+        self.stdout.write("  Jurados:        jurado1@ · jurado2@ · jurado3@festival.test  /  " + CLAVE_JURADO)
+        self.stdout.write("  Arranque con:   python manage.py runserver 8888   (o doble clic en iniciar.bat)")
+        self.stdout.write("  Sitio: http://localhost:8888   Panel: http://localhost:8888/panel/")

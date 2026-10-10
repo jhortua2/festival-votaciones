@@ -1,14 +1,19 @@
-"""Modelo de datos: Edición → Categoría → Votación → Opción → Voto (+ Usuario en la app cuentas).
+"""Modelo de datos: Edición → Categoría → Votación → Opción → Voto / Calificación (+ Usuario en la app cuentas).
 
 Cada clase corresponde a una entidad del modelo conceptual de la Entrega 1.
 Las reglas de negocio que dependen del cliente se dejan como opciones
-configurables por votación (frecuencia, visibilidad), no fijas en el código.
+configurables por votación (frecuencia, visibilidad, peso del jurado), no fijas en el código.
+
+Resultado de una votación (RN-11): combina la calificación del jurado y el voto
+del público según el peso configurado (propuesta: 70 % jurado y 30 % público,
+pendiente de validación P-06).
 """
 import secrets
 import string
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
@@ -94,6 +99,19 @@ class Votacion(models.Model):
     cierre = models.DateTimeField()
     frecuencia = models.CharField(max_length=12, choices=Frecuencia.choices, default=Frecuencia.UNA_VEZ)
     visibilidad = models.CharField(max_length=12, choices=Visibilidad.choices, default=Visibilidad.SOLO_ADMIN)
+    # RN-11: peso del jurado en el resultado final (0 = solo público, 100 = solo jurado).
+    peso_jurado = models.PositiveSmallIntegerField(
+        "peso del jurado (%)", default=70, validators=[MaxValueValidator(100)],
+        help_text="El público tiene el resto (100 − este valor). Propuesta 70/30, pendiente de validación (P-06).",
+    )
+    escala_maxima = models.PositiveSmallIntegerField(
+        "puntaje máximo del jurado", default=10, validators=[MinValueValidator(2), MaxValueValidator(100)],
+        help_text="Cada jurado califica de 1 a este valor. Pendiente de validación (P-16).",
+    )
+    jurados = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, blank=True, related_name="votaciones_como_jurado",
+        limit_choices_to={"rol": "jurado"}, help_text="Solo los jurados asignados pueden calificar esta votación (RN-13).",
+    )
     publicada = models.BooleanField(default=False)
     cerrada_manualmente = models.DateTimeField(null=True, blank=True)
     justificacion_cierre = models.CharField(max_length=255, blank=True)
@@ -105,6 +123,7 @@ class Votacion(models.Model):
         verbose_name_plural = "votaciones"
         constraints = [
             models.CheckConstraint(condition=models.Q(cierre__gt=models.F("apertura")), name="cierre_posterior_apertura"),
+            models.CheckConstraint(condition=models.Q(peso_jurado__lte=100), name="peso_jurado_hasta_100"),
         ]
 
     def __str__(self):
@@ -134,6 +153,27 @@ class Votacion(models.Model):
     def esta_abierta(self):
         return self.estado == self.Estado.ABIERTA
 
+    # --- Ponderación jurado / público (RN-11) ---
+    @property
+    def peso_publico(self):
+        return 100 - self.peso_jurado
+
+    @property
+    def tiene_jurado(self):
+        return self.peso_jurado > 0
+
+    @property
+    def tiene_publico(self):
+        return self.peso_publico > 0
+
+    @property
+    def modalidad(self):
+        if not self.tiene_jurado:
+            return "Solo público"
+        if not self.tiene_publico:
+            return "Solo jurado"
+        return f"Jurado {self.peso_jurado} % + público {self.peso_publico} %"
+
     def opciones_activas(self):
         return self.opciones.filter(activa=True)
 
@@ -156,6 +196,36 @@ class Votacion(models.Model):
         for o in opciones:
             o.porcentaje = (o.total * 100 / total) if total else 0
         return opciones, total
+
+    def resultados_ponderados(self):
+        """RN-11: resultado final = peso_jurado × % del jurado + peso_público × % del público.
+
+        - % del público: votos de la opción / total de votos de la votación.
+        - % del jurado: suma de puntajes de la opción / suma de todos los puntajes.
+        Ambos suman 100 entre todas las opciones, así que el resultado final también.
+        """
+        # Se consultan por separado: unir votos y calificaciones en una sola consulta multiplicaría las sumas.
+        opciones = list(self.opciones.annotate(n_votos=models.Count("votos")).order_by("orden"))
+        jurado = {f["opcion"]: f for f in Calificacion.objects.filter(votacion=self).values("opcion").annotate(
+            suma=models.Sum("puntaje"), n=models.Count("id"))}
+        for o in opciones:
+            o.suma_puntaje = jurado.get(o.pk, {}).get("suma") or 0
+            o.n_calif = jurado.get(o.pk, {}).get("n") or 0
+        total_votos = sum(o.n_votos for o in opciones)
+        total_puntaje = sum(o.suma_puntaje or 0 for o in opciones)
+        for o in opciones:
+            o.promedio = (o.suma_puntaje / o.n_calif) if o.n_calif else None
+            o.pct_publico = (o.n_votos * 100 / total_votos) if total_votos else 0
+            o.pct_jurado = (o.suma_puntaje * 100 / total_puntaje) if total_puntaje else 0
+            o.aporte_jurado = self.peso_jurado * o.pct_jurado / 100
+            o.aporte_publico = self.peso_publico * o.pct_publico / 100
+            o.final = o.aporte_jurado + o.aporte_publico
+        opciones.sort(key=lambda o: (-o.final, o.orden))
+        return opciones, total_votos
+
+    def calificaciones_esperadas(self):
+        """Jurados asignados × opciones activas."""
+        return self.jurados.count() * self.opciones_activas().count()
 
 
 def _color_por_defecto():
@@ -223,3 +293,30 @@ class Voto(models.Model):
 
     def __str__(self):
         return f"{self.codigo} · {self.opcion}"
+
+
+class Calificacion(models.Model):
+    """Puntaje que un jurado le da a una opción (RF-15). No se modifica después de enviarla (RN-14).
+
+    Igual que en Voto, se guarda `votacion` para consultar rápido y para que la base
+    de datos impida que un jurado califique dos veces la misma opción.
+    """
+
+    jurado = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="calificaciones")
+    votacion = models.ForeignKey(Votacion, on_delete=models.PROTECT, related_name="calificaciones")
+    opcion = models.ForeignKey(Opcion, on_delete=models.PROTECT, related_name="calificaciones")
+    puntaje = models.PositiveSmallIntegerField(validators=[MinValueValidator(1)])
+    comentario = models.CharField(max_length=255, blank=True)
+    fecha = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-fecha"]
+        verbose_name = "calificación"
+        verbose_name_plural = "calificaciones"
+        constraints = [
+            models.UniqueConstraint(fields=["jurado", "opcion"], name="una_calificacion_por_jurado_y_opcion"),
+            models.CheckConstraint(condition=models.Q(puntaje__gte=1), name="puntaje_minimo_1"),
+        ]
+
+    def __str__(self):
+        return f"{self.opcion} · {self.puntaje}"

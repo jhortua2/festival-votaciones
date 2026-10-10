@@ -18,6 +18,7 @@ urlpatterns = [
     path("opciones/<int:pk>/editar/", v.opcion_editar, name="opcion_editar"),
     path("opciones/<int:pk>/estado/", v.opcion_estado, name="opcion_estado"),
     path("opciones/<int:pk>/eliminar/", v.opcion_eliminar, name="opcion_eliminar"),
+    path("jurados/", v.jurados, name="jurados"),
     path("resultados/", v.resultados, name="resultados"),
     path("resultados/<int:pk>/", v.resultados, name="resultados_votacion"),
     path("resultados/<int:pk>/csv/", v.resultados_csv, name="resultados_csv"),

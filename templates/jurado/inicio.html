@@ -1,0 +1,33 @@
+{% extends "base.html" %}{% load festival %}
+{% block titulo %}Panel del jurado{% endblock %}
+{% block contenido %}
+<div class="container-lg py-4 d-flex flex-column gap-3">
+  <div>
+    <span class="eyebrow">Jurado · {{ user.get_full_name|default:user.email }}</span>
+    <h1 class="h-display m-0" style="font-size:2rem">Votaciones asignadas</h1>
+    <p class="text-secondary m-0">Califica cada opción con un puntaje. Tu calificación se envía una sola vez y no se puede cambiar.</p>
+  </div>
+  {% for v in votaciones %}
+    <div class="jur-card flex-wrap">
+      <div class="flex-grow-1" style="min-width:220px">
+        <span class="eyebrow">{{ v.categoria.nombre }}</span>
+        <h3>{{ v.nombre }}</h3>
+        <div class="d-flex flex-wrap gap-2 align-items-center mt-1">
+          <span class="{{ v.estado|pill }}">{{ v.estado_etiqueta }}</span>
+          <span class="nota">{{ v.modalidad }} · escala 1 a {{ v.escala_maxima }}</span>
+        </div>
+      </div>
+      {% if v.calificada %}
+        <a class="btn btn-linea" href="{% url 'jurado:calificar' v.pk %}">✓ Calificada · ver</a>
+      {% elif v.esta_abierta %}
+        <a class="btn btn-sol" href="{% url 'jurado:calificar' v.pk %}">Calificar</a>
+      {% else %}
+        <span class="nota">{% if v.estado == "proxima" %}Abre {{ v.apertura|date:"j M · g:i a" }}{% else %}Cerrada{% endif %}</span>
+      {% endif %}
+    </div>
+  {% empty %}
+    <div class="ejemplo">Todavía no tienes votaciones asignadas. La Fundación te las asigna desde el panel de administración.</div>
+  {% endfor %}
+  <p class="nota m-0">Solo ves las votaciones a las que fuiste asignado (RN-13). Como jurado no puedes votar como público en esas votaciones (RN-15).</p>
+</div>
+{% endblock %}

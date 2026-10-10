@@ -1,0 +1,22 @@
+/* Módulo del jurado y ponderación jurado/público (RF-15, RF-16). */
+.jur-card { background: var(--monte-2); border: 1px solid var(--linea); border-radius: 14px; padding: 1rem; display: flex; gap: 1rem; align-items: center; }
+.jur-card .mini { flex: none; }
+.jur-card h3 { font-size: 1.05rem; font-weight: 800; margin: 0; }
+.escala { display: flex; flex-wrap: wrap; gap: .35rem; }
+.escala input { position: absolute; opacity: 0; pointer-events: none; }
+.escala label { min-width: 2.6rem; height: 2.6rem; display: grid; place-items: center; border-radius: 10px; border: 1px solid var(--linea); background: var(--monte); font-weight: 800; cursor: pointer; font-variant-numeric: tabular-nums; }
+.escala label:hover { border-color: var(--sol); color: var(--sol); }
+.escala input:checked + label { background: var(--sol); border-color: var(--sol); color: var(--tinta); }
+.escala input:focus-visible + label { outline: 3px solid var(--sol); outline-offset: 2px; }
+.nota-final { font-family: var(--f-display); font-size: 2rem; line-height: 1; color: var(--sol); }
+.peso { display: flex; height: 12px; border-radius: 999px; overflow: hidden; border: 1px solid var(--linea); }
+.peso .j { background: var(--sol); } .peso .p { background: var(--rio); }
+.leyenda-peso { display: flex; flex-wrap: wrap; gap: .25rem 1rem; font-size: .8rem; color: var(--texto-2); }
+.leyenda-peso i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: .35rem; vertical-align: -1px; }
+.barra-doble { display: grid; gap: 3px; }
+.barra-doble .barra { height: 8px; }
+.barra .j { background: var(--sol); } .barra .p { background: var(--rio); }
+.rol-jurado { color: var(--sol); border: 1px solid var(--sol); border-radius: 6px; font-size: .7rem; font-weight: 800; padding: .05rem .4rem; letter-spacing: .06em; text-transform: uppercase; }
+.barra.apilada { display: flex; }
+.barra.apilada div { border-radius: 0; }
+.barra.apilada div:first-child { border-radius: 999px 0 0 999px; }

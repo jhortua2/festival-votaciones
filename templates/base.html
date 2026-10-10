@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap">
   <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
   <link rel="stylesheet" href="{% static 'css/festival.css' %}">
+  <link rel="stylesheet" href="{% static 'css/jurado.css' %}">
 </head>
 <body>
 {% block barra %}
@@ -23,9 +24,10 @@
       <span><b>Tu Voto Vallenato</b><small>{{ edicion_actual.nombre|default:"Festival 2027"|truncatechars:34 }}</small></span>
     </a>
     <nav class="d-none d-md-flex nav gap-1 ms-3" aria-label="Principal">
-      <a class="nav-link {% if request.resolver_match.url_name == 'inicio' %}active{% endif %}" href="{% url 'votaciones:inicio' %}">Inicio</a>
+      <a class="nav-link {% if request.resolver_match.url_name == 'inicio' and request.resolver_match.app_name == 'votaciones' %}active{% endif %}" href="{% url 'votaciones:inicio' %}">Inicio</a>
       <a class="nav-link {% if request.resolver_match.url_name == 'categorias' %}active{% endif %}" href="{% url 'votaciones:categorias' %}">Categorías</a>
       {% if user.is_authenticated %}<a class="nav-link" href="{% url 'cuentas:mis_votos' %}">Mis votos</a>{% endif %}
+      {% if user.is_authenticated and user.es_jurado %}<a class="nav-link {% if request.resolver_match.app_name == 'jurado' %}active{% endif %}" href="{% url 'jurado:inicio' %}">Jurado</a>{% endif %}
       {% if user.is_authenticated and user.es_admin %}<a class="nav-link" href="{% url 'panel:panel' %}">Administración</a>{% endif %}
     </nav>
     <div class="ms-auto d-flex align-items-center gap-2">
@@ -56,9 +58,11 @@
   </div>
 </footer>
 <nav class="tabbar" aria-label="Navegación inferior">
-  <a href="{% url 'votaciones:inicio' %}" class="{% if request.resolver_match.url_name == 'inicio' %}on{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Inicio</a>
+  <a href="{% url 'votaciones:inicio' %}" class="{% if request.resolver_match.url_name == 'inicio' and request.resolver_match.app_name == 'votaciones' %}on{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Inicio</a>
   <a href="{% url 'votaciones:categorias' %}" class="{% if request.resolver_match.url_name == 'categorias' or request.resolver_match.url_name == 'categoria' %}on{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>Categorías</a>
-  {% if user.is_authenticated %}
+  {% if user.is_authenticated and user.es_jurado %}
+  <a href="{% url 'jurado:inicio' %}" class="{% if request.resolver_match.app_name == 'jurado' %}on{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.2 1 5.8L12 16.4 6.8 19.2l1-5.8L3.5 9.2l5.9-.9z"/></svg>Jurado</a>
+  {% elif user.is_authenticated %}
   <a href="{% url 'cuentas:mis_votos' %}" class="{% if request.resolver_match.url_name == 'mis_votos' %}on{% endif %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Mis votos</a>
   {% else %}
   <a href="{% url 'cuentas:login' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Ingresar</a>
