@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load festival %}
 {% block titulo %}Crear cuenta{% endblock %}
 {% block contenido %}
 <div class="container-lg py-4">
@@ -17,7 +17,7 @@
         {% include "includes/campo.html" with campo=form.password1 %}
         {% include "includes/campo.html" with campo=form.password2 %}
         {% include "includes/campo.html" with campo=form.acepto %}
-        <p class="nota">Política de tratamiento de datos de la Fundación: <span class="pend">pendiente de validación · P-08</span></p>
+        <p class="nota">Política de tratamiento de datos de la Fundación: {% regla "P-08" %}</p>
         <button class="btn btn-sol btn-lg w-100" type="submit">Crear cuenta</button>
         <p class="text-center text-secondary mt-3 mb-0">¿Ya tienes cuenta? <a href="{% url 'cuentas:login' %}">Inicia sesión</a></p>
       </form>

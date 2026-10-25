@@ -21,7 +21,7 @@ class OpcionInline(admin.TabularInline):
 
 @admin.register(Votacion)
 class VotacionAdmin(admin.ModelAdmin):
-    list_display = ("nombre", "categoria", "apertura", "cierre", "publicada", "frecuencia", "visibilidad", "peso_jurado")
+    list_display = ("nombre", "categoria", "apertura", "cierre", "publicada", "frecuencia", "visibilidad", "modo")
     filter_horizontal = ("jurados",)
     list_filter = ("categoria", "publicada")
     inlines = [OpcionInline]

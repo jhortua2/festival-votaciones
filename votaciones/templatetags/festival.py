@@ -30,3 +30,21 @@ def restante(votacion):
     delta = votacion.cierre - timezone.now()
     s = max(int(delta.total_seconds()), 0)
     return {"dias": s // 86400, "horas": (s % 86400) // 3600, "minutos": (s % 3600) // 60}
+
+
+@register.simple_tag
+def regla(*codigos):
+    """Etiqueta con el origen de una regla: «Enunciado · RN-01» o «Propuesta · RN-06 · P-05».
+
+    Si alguno de los códigos es propuesta o pregunta abierta, toda la etiqueta se muestra como propuesta.
+    """
+    from django.utils.html import format_html
+
+    from votaciones.reglas import DESCRIPCION, ETIQUETA, PROPUESTA, origen
+
+    estados = {origen(c) for c in codigos}
+    estado = PROPUESTA if PROPUESTA in estados else estados.pop()
+    return format_html(
+        '<span class="origen origen-{}" title="{}">{} · {}</span>',
+        estado, DESCRIPCION[estado], ETIQUETA[estado], " · ".join(codigos),
+    )

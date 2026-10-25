@@ -4,9 +4,10 @@ Cada clase corresponde a una entidad del modelo conceptual de la Entrega 1.
 Las reglas de negocio que dependen del cliente se dejan como opciones
 configurables por votación (frecuencia, visibilidad, peso del jurado), no fijas en el código.
 
-Resultado de una votación (RN-11): combina la calificación del jurado y el voto
-del público según el peso configurado (propuesta: 70 % jurado y 30 % público,
-pendiente de validación P-06).
+Resultado de una votación (RN-11): todavía no está definido si el voto del público
+es independiente del jurado o se combina con él (P-06). Por eso cada votación tiene
+un modo configurable: solo público, solo jurado, independiente o combinado. El
+70 % jurado / 30 % público del modo combinado es una propuesta del equipo.
 """
 import secrets
 import string
@@ -86,6 +87,13 @@ class Votacion(models.Model):
         AL_CIERRE = "al_cierre", "Públicos al cierre"
         TIEMPO_REAL = "tiempo_real", "Públicos en tiempo real"
 
+    class Modo(models.TextChoices):
+        # RN-11 / P-06: pendiente de validación. La Fundación debe decidir el modo.
+        PUBLICO = "publico", "Solo público"
+        JURADO = "jurado", "Solo jurado"
+        INDEPENDIENTE = "independiente", "Independiente: fallo del jurado y premio del público por separado"
+        COMBINADO = "combinado", "Combinado: jurado y público en un solo resultado"
+
     class Estado(models.TextChoices):
         BORRADOR = "borrador", "Borrador"
         PROXIMA = "proxima", "Próxima"
@@ -99,10 +107,15 @@ class Votacion(models.Model):
     cierre = models.DateTimeField()
     frecuencia = models.CharField(max_length=12, choices=Frecuencia.choices, default=Frecuencia.UNA_VEZ)
     visibilidad = models.CharField(max_length=12, choices=Visibilidad.choices, default=Visibilidad.SOLO_ADMIN)
-    # RN-11: peso del jurado en el resultado final (0 = solo público, 100 = solo jurado).
+    # RN-11: cómo se define el resultado. Pendiente de validación (P-06).
+    modo = models.CharField(
+        "modo de resultado", max_length=14, choices=Modo.choices, default=Modo.INDEPENDIENTE,
+        help_text="Pendiente de validación (P-06). Independiente no mezcla el voto del público con el fallo del jurado.",
+    )
+    # Solo aplica al modo combinado: peso del jurado en el resultado final.
     peso_jurado = models.PositiveSmallIntegerField(
-        "peso del jurado (%)", default=70, validators=[MaxValueValidator(100)],
-        help_text="El público tiene el resto (100 − este valor). Propuesta 70/30, pendiente de validación (P-06).",
+        "peso del jurado (%)", default=70, validators=[MinValueValidator(1), MaxValueValidator(99)],
+        help_text="Solo en modo combinado. El público tiene el resto. Propuesta del equipo 70/30, pendiente de validación (P-06).",
     )
     escala_maxima = models.PositiveSmallIntegerField(
         "puntaje máximo del jurado", default=10, validators=[MinValueValidator(2), MaxValueValidator(100)],
@@ -123,7 +136,7 @@ class Votacion(models.Model):
         verbose_name_plural = "votaciones"
         constraints = [
             models.CheckConstraint(condition=models.Q(cierre__gt=models.F("apertura")), name="cierre_posterior_apertura"),
-            models.CheckConstraint(condition=models.Q(peso_jurado__lte=100), name="peso_jurado_hasta_100"),
+            models.CheckConstraint(condition=models.Q(peso_jurado__gte=1, peso_jurado__lte=99), name="peso_jurado_entre_1_y_99"),
         ]
 
     def __str__(self):
@@ -153,26 +166,34 @@ class Votacion(models.Model):
     def esta_abierta(self):
         return self.estado == self.Estado.ABIERTA
 
-    # --- Ponderación jurado / público (RN-11) ---
+    # --- Modo de resultado: jurado y público (RN-11 / P-06) ---
     @property
     def peso_publico(self):
         return 100 - self.peso_jurado
 
     @property
     def tiene_jurado(self):
-        return self.peso_jurado > 0
+        return self.modo != self.Modo.PUBLICO
 
     @property
     def tiene_publico(self):
-        return self.peso_publico > 0
+        return self.modo != self.Modo.JURADO
+
+    @property
+    def es_combinado(self):
+        return self.modo == self.Modo.COMBINADO
+
+    @property
+    def es_independiente(self):
+        return self.modo == self.Modo.INDEPENDIENTE
 
     @property
     def modalidad(self):
-        if not self.tiene_jurado:
-            return "Solo público"
-        if not self.tiene_publico:
-            return "Solo jurado"
-        return f"Jurado {self.peso_jurado} % + público {self.peso_publico} %"
+        if self.es_combinado:
+            return f"Jurado {self.peso_jurado} % + público {self.peso_publico} %"
+        if self.es_independiente:
+            return "Jurado y público por separado"
+        return self.get_modo_display()
 
     def opciones_activas(self):
         return self.opciones.filter(activa=True)
@@ -198,11 +219,13 @@ class Votacion(models.Model):
         return opciones, total
 
     def resultados_ponderados(self):
-        """RN-11: resultado final = peso_jurado × % del jurado + peso_público × % del público.
+        """Resultados por opción según el modo (RN-11).
 
         - % del público: votos de la opción / total de votos de la votación.
         - % del jurado: suma de puntajes de la opción / suma de todos los puntajes.
-        Ambos suman 100 entre todas las opciones, así que el resultado final también.
+        - Combinado: final = peso_jurado × % del jurado + peso_público × % del público.
+        - Independiente: no hay un resultado final mezclado (final = None); el orden es el del jurado
+          y el público tiene su propio orden por votos.
         """
         # Se consultan por separado: unir votos y calificaciones en una sola consulta multiplicaría las sumas.
         opciones = list(self.opciones.annotate(n_votos=models.Count("votos")).order_by("orden"))
@@ -217,11 +240,26 @@ class Votacion(models.Model):
             o.promedio = (o.suma_puntaje / o.n_calif) if o.n_calif else None
             o.pct_publico = (o.n_votos * 100 / total_votos) if total_votos else 0
             o.pct_jurado = (o.suma_puntaje * 100 / total_puntaje) if total_puntaje else 0
-            o.aporte_jurado = self.peso_jurado * o.pct_jurado / 100
-            o.aporte_publico = self.peso_publico * o.pct_publico / 100
-            o.final = o.aporte_jurado + o.aporte_publico
-        opciones.sort(key=lambda o: (-o.final, o.orden))
+            if self.es_combinado:
+                o.aporte_jurado = self.peso_jurado * o.pct_jurado / 100
+                o.aporte_publico = self.peso_publico * o.pct_publico / 100
+                o.final = o.aporte_jurado + o.aporte_publico
+            elif self.modo == self.Modo.JURADO:
+                o.aporte_jurado, o.aporte_publico, o.final = o.pct_jurado, 0, o.pct_jurado
+            elif self.modo == self.Modo.PUBLICO:
+                o.aporte_jurado, o.aporte_publico, o.final = 0, o.pct_publico, o.pct_publico
+            else:  # Independiente: cada uno por su lado
+                o.aporte_jurado = o.aporte_publico = o.final = None
+        if self.es_independiente:
+            opciones.sort(key=lambda o: (-o.pct_jurado, o.orden))
+        else:
+            opciones.sort(key=lambda o: (-o.final, o.orden))
         return opciones, total_votos
+
+    def ranking_publico(self, opciones=None):
+        """Orden por votos del público (para el modo independiente)."""
+        opciones = opciones if opciones is not None else self.resultados_ponderados()[0]
+        return sorted(opciones, key=lambda o: (-o.n_votos, o.orden))
 
     def calificaciones_esperadas(self):
         """Jurados asignados × opciones activas."""

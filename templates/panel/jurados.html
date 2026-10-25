@@ -1,4 +1,4 @@
-{% extends "panel/base_panel.html" %}
+{% extends "panel/base_panel.html" %}{% load festival %}
 {% block titulo %}Jurados{% endblock %}
 {% block panel %}
 <div><span class="eyebrow">{{ edicion_actual.nombre }}</span><h1 class="h3 fw-bold m-0">Jurados</h1></div>
@@ -16,7 +16,7 @@
       <h2 class="h6 fw-bold">Nuevo jurado</h2>
       {% for campo in form %}{% include "includes/campo.html" %}{% endfor %}
       <button class="btn btn-sol" type="submit">Crear jurado</button>
-      <p class="nota mt-2 mb-0">Después asígnalo en <b>Votaciones → Editar</b>. Cuántos jurados habrá y quién los designa: pendiente de validación <span class="pend">P-17</span></p>
+      <p class="nota mt-2 mb-0">Después asígnalo en <b>Votaciones → Editar</b>. Cuántos jurados habrá y quién los designa: pendiente de validación {% regla "P-17" %}</p>
     </form>
   </div>
 </div>

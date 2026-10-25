@@ -1,6 +1,7 @@
 """Vistas públicas: inicio, categorías, votaciones, opciones, confirmación y comprobante."""
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Count, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -28,6 +29,15 @@ def inicio(request):
         "destacada": abiertas[0] if abiertas else None,
         "categorias": categorias,
     })
+
+
+def ediciones(request):
+    """Ediciones anuales del Festival (Entrega 2): la activa y las anteriores, con sus categorías."""
+    lista = Edicion.objects.prefetch_related("categorias").annotate(
+        n_vot=Count("categorias__votaciones", filter=Q(categorias__votaciones__publicada=True, categorias__activa=True)))
+    for e in lista:
+        e.cats = [c for c in e.categorias.all() if c.activa]
+    return render(request, "votaciones/ediciones.html", {"ediciones": lista})
 
 
 def categorias(request):

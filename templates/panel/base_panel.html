@@ -15,6 +15,7 @@
 <div class="adm-layout">
   <nav class="adm-nav" aria-label="Administración">
     <a href="{% url 'panel:panel' %}" class="{% if seccion == 'panel' %}on{% endif %}"><span class="dot"></span>Panel</a>
+    <a href="{% url 'panel:ediciones' %}" class="{% if seccion == 'ediciones' %}on{% endif %}"><span class="dot"></span>Ediciones</a>
     <a href="{% url 'panel:categorias' %}" class="{% if seccion == 'categorias' %}on{% endif %}"><span class="dot"></span>Categorías</a>
     <a href="{% url 'panel:votaciones' %}" class="{% if seccion == 'votaciones' %}on{% endif %}"><span class="dot"></span>Votaciones y opciones</a>
     <a href="{% url 'panel:jurados' %}" class="{% if seccion == 'jurados' %}on{% endif %}"><span class="dot"></span>Jurados</a>

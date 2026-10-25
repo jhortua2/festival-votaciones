@@ -24,7 +24,7 @@ CLAVE_JURADO = "Jurado2027!"
 
 
 class Command(BaseCommand):
-    help = "Carga datos de ejemplo (edición 2027, categorías, votaciones, opciones, usuarios y votos)."
+    help = "Carga datos de ejemplo (ediciones 2026 y 2027, categorías, votaciones, opciones, usuarios y votos)."
 
     def add_arguments(self, parser):
         parser.add_argument("--reiniciar", action="store_true", help="Borra los datos de votaciones antes de cargar.")
@@ -72,14 +72,16 @@ class Command(BaseCommand):
             j.set_password(CLAVE_JURADO); j.save()
             jurados.append(j)
 
+        # Dos ediciones para mostrar que el sistema maneja varios años: la 2026 ya pasó y la 2027 es la activa.
+        ed26 = Edicion.objects.create(anio=2026, numero=59, nombre="Festival de la Leyenda Vallenata 2026", activa=False)
         ed = Edicion.objects.create(anio=2027, numero=60, nombre="Festival de la Leyenda Vallenata 2027", activa=True)
 
         musica = Categoria.objects.create(edicion=ed, nombre="Música", descripcion="Canciones y presentaciones en tarima", orden=1, icono="acordeon", color="#F4B400")
         pilon = Categoria.objects.create(edicion=ed, nombre="Piloneras", descripcion="Grupos del desfile de apertura", orden=2, icono="pollera", color="#E23D32")
         publico = Categoria.objects.create(edicion=ed, nombre="Reconocimientos del público", descripcion="Vestuario, ambiente y otros", orden=3, icono="sombrero", color="#35B2A1")
 
-        V, F = Votacion.Visibilidad, Votacion.Frecuencia
-        cancion = self._votacion(musica, "Mejor canción inédita", "Escoge la canción inédita que más te llegó al corazón. El resultado combina la calificación del jurado (70 %) y el voto del público (30 %).",
+        V, F, M = Votacion.Visibilidad, Votacion.Frecuencia, Votacion.Modo
+        cancion = self._votacion(musica, "Mejor canción inédita", "Escoge la canción inédita que más te llegó al corazón. Ejemplo del modo combinado: jurado 70 % + público 30 % (propuesta del equipo, pendiente de validación).",
                                  ahora - dia, ahora + 3 * dia, F.UNA_VEZ, V.SOLO_ADMIN, [
                                      ("Brisa del Guatapurí", "Paseo", "#F4B400"), ("Pilón de mi tierra", "Merengue", "#E23D32"),
                                      ("Sabana de sol", "Son", "#35B2A1"), ("Puya pa' la plaza", "Puya", "#7A5CFF")])
@@ -90,18 +92,26 @@ class Command(BaseCommand):
                        ahora + 5 * dia, ahora + 8 * dia, F.UNA_VEZ, V.AL_CIERRE, [
                            ("Conjunto inscrito #03", "Tarima Francisco el Hombre", "#F4B400"), ("Conjunto inscrito #11", "Tarima Francisco el Hombre", "#E23D32"),
                            ("Conjunto inscrito #24", "Tarima Francisco el Hombre", "#35B2A1")])
-        piloneras = self._votacion(pilon, "Grupo de piloneras favorito", "Votación de ejemplo ya cerrada: jurado 70 % + público 30 %, con resultados públicos al cierre.",
+        piloneras = self._votacion(pilon, "Grupo de piloneras favorito", "Votación de ejemplo ya cerrada en modo independiente: el jurado da el fallo oficial y el público un reconocimiento aparte.",
                                    ahora - 10 * dia, ahora - 2 * dia, F.UNA_VEZ, V.AL_CIERRE, [
                                        ("Grupo Mayores A", "Categoría mayores", "#E23D32"), ("Grupo Juvenil B", "Categoría juvenil", "#F4B400"),
                                        ("Grupo Infantil C", "Categoría infantil", "#35B2A1")])
         borrador = Votacion.objects.create(categoria=publico, nombre="Vestuario más colorido", descripcion="Borrador: falta agregar opciones.",
-                                           apertura=ahora + 6 * dia, cierre=ahora + 9 * dia, peso_jurado=0)
+                                           apertura=ahora + 6 * dia, cierre=ahora + 9 * dia, modo=M.PUBLICO)
 
-        # Ponderación (RN-11): propuesta 70/30 en las votaciones con jurado; "Tu aire favorito" es solo del público.
-        aire.peso_jurado = 0
-        aire.save(update_fields=["peso_jurado"])
-        for v in Votacion.objects.filter(peso_jurado__gt=0):
+        # Modo de resultado (RN-11 / P-06, pendiente de validación): se muestran los dos escenarios.
+        # Combinado (propuesta 70/30): canción inédita. Independiente: piloneras y tarima. Solo público: aire.
+        Votacion.objects.filter(pk=cancion.pk).update(modo=M.COMBINADO, peso_jurado=70)
+        Votacion.objects.filter(pk=aire.pk).update(modo=M.PUBLICO)
+        for v in Votacion.objects.exclude(modo=M.PUBLICO):
             v.jurados.set(jurados)
+
+        # Edición 2026 (ya pasada), con una votación cerrada del público para consultar el histórico.
+        musica26 = Categoria.objects.create(edicion=ed26, nombre="Música", descripcion="Votaciones de la edición 59", orden=1, icono="acordeon", color="#F4B400")
+        aire26 = self._votacion(musica26, "Tu aire favorito 2026", "Votación de ejemplo de la edición anterior. Solo del público.",
+                                ahora - 180 * dia, ahora - 175 * dia, F.UNA_VEZ, V.AL_CIERRE, [
+                                    ("Paseo", "Aire", "#F4B400"), ("Merengue", "Aire", "#E23D32"), ("Son", "Aire", "#35B2A1"), ("Puya", "Aire", "#7A5CFF")])
+        Votacion.objects.filter(pk=aire26.pk).update(modo=M.PUBLICO)
         Opcion.objects.create(votacion=borrador, nombre="Comparsa de ejemplo", detalle="Desfile", color="#35B2A1")
 
         # Votantes de prueba y votos (bypass del servicio solo para sembrar datos)
@@ -115,6 +125,7 @@ class Command(BaseCommand):
         self._sembrar(cancion, usuarios, [5, 4, 2.5, 1.5], ahora)
         self._sembrar(aire, usuarios, [4, 3, 2, 3], ahora)
         self._sembrar(piloneras, usuarios, [3, 5, 2], piloneras.cierre - dia)
+        self._sembrar(aire26, usuarios, [5, 2, 2, 3], aire26.cierre - dia)
 
         # Calificaciones del jurado (bypass del servicio solo para sembrar datos).
         # En "Canción favorita" falta un jurado por calificar, para mostrar resultados parciales.
@@ -122,7 +133,7 @@ class Command(BaseCommand):
         self._calificar(piloneras, jurados, [[8, 7, 9], [9, 6, 9], [8, 7, 10]], piloneras.cierre - dia)
 
         Registro.objects.create(usuario=admin, accion="datos_demo", detalle="Carga de datos de ejemplo")
-        self.stdout.write(self.style.SUCCESS(f"Datos de ejemplo cargados: 3 categorías, 5 votaciones, {Voto.objects.count()} votos, {len(jurados)} jurados y {Calificacion.objects.count()} calificaciones."))
+        self.stdout.write(self.style.SUCCESS(f"Datos de ejemplo cargados: 2 ediciones, {Categoria.objects.count()} categorías, {Votacion.objects.count()} votaciones, {Voto.objects.count()} votos, {len(jurados)} jurados y {Calificacion.objects.count()} calificaciones."))
         self._credenciales()
 
     def _votacion(self, cat, nombre, desc, apertura, cierre, frecuencia, visibilidad, opciones):
@@ -154,5 +165,5 @@ class Command(BaseCommand):
         self.stdout.write("  Administrador:  " + ADMIN[0] + "  /  " + ADMIN[1])
         self.stdout.write("  Votante:        " + VOTANTE[0] + "  /  " + VOTANTE[1])
         self.stdout.write("  Jurados:        jurado1@ · jurado2@ · jurado3@festival.test  /  " + CLAVE_JURADO)
-        self.stdout.write("  Arranque con:   python manage.py runserver 8888   (o doble clic en iniciar.bat)")
+        self.stdout.write("  Arranque con:   py manage.py runserver 8888")
         self.stdout.write("  Sitio: http://localhost:8888   Panel: http://localhost:8888/panel/")

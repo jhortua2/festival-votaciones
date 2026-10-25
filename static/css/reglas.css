@@ -1,0 +1,10 @@
+/* Origen de las reglas (observación de la Entrega 1): enunciado del cliente vs. propuesta del equipo */
+.origen { display: inline-flex; align-items: center; gap: .3rem; font-size: .7rem; font-weight: 700; border-radius: 6px; padding: .1rem .45rem; white-space: nowrap; vertical-align: middle; }
+.origen-propuesta { color: var(--sol); border: 1px dashed var(--sol); }
+.origen-propuesta::before { content: "?"; display: inline-grid; place-items: center; width: .9rem; height: .9rem; border-radius: 50%; background: var(--sol); color: #0D271E; font-size: .6rem; }
+.origen-enunciado, .origen-aprobada { color: #7fe0cf; border: 1px solid #35B2A1; background: rgba(53,178,161,.12); }
+.origen-enunciado::before, .origen-aprobada::before { content: "✓"; font-size: .7rem; }
+.leyenda-origen { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; font-size: .8rem; color: var(--bs-secondary-color, #9fb3a8); border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: .55rem .75rem; }
+.aviso-propuesta { border: 1px dashed var(--sol); border-radius: 10px; padding: .6rem .8rem; font-size: .85rem; }
+.aviso-propuesta b { color: var(--sol); }
+.dos-rankings { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }

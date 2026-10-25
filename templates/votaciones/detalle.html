@@ -10,17 +10,20 @@
   </div>
 
   <h2 class="h5 fw-bold m-0 mt-2">Reglas de esta votación</h2>
+  {% include "includes/leyenda_origen.html" %}
   <div class="row g-2">
-    <div class="col-md-6"><div class="regla"><span class="ic">1×</span><div><b>{{ votacion.get_frecuencia_display }}</b><span>Regla configurada por el administrador. <span class="pend">RN-06</span></span></div></div></div>
-    <div class="col-md-6"><div class="regla"><span class="ic">⏱</span><div><b>Abre {{ votacion.apertura|date:"j M Y · g:i a" }}</b><span>Cierra {{ votacion.cierre|date:"j M Y · g:i a" }}</span></div></div></div>
-    <div class="col-md-6"><div class="regla"><span class="ic">🔒</span><div><b>Tu voto no se puede cambiar</b><span>Por eso te pedimos confirmarlo antes. <span class="pend">RN-05</span></span></div></div></div>
-    <div class="col-md-6"><div class="regla"><span class="ic">%</span><div><b>Resultados: {{ votacion.get_visibilidad_display|lower }}</b><span>Configurable por votación. <span class="pend">P-05</span></span></div></div></div>
+    <div class="col-md-6"><div class="regla"><span class="ic">1×</span><div><b>{{ votacion.get_frecuencia_display }}</b><span>Regla configurada por el administrador. {% regla "RN-06" %}</span></div></div></div>
+    <div class="col-md-6"><div class="regla"><span class="ic">⏱</span><div><b>Abre {{ votacion.apertura|date:"j M Y · g:i a" }}</b><span>Cierra {{ votacion.cierre|date:"j M Y · g:i a" }} {% regla "RN-02" %}</span></div></div></div>
+    <div class="col-md-6"><div class="regla"><span class="ic">🔒</span><div><b>Tu voto no se puede cambiar</b><span>Por eso te pedimos confirmarlo antes. {% regla "RN-05" %}</span></div></div></div>
+    <div class="col-md-6"><div class="regla"><span class="ic">%</span><div><b>Resultados: {{ votacion.get_visibilidad_display|lower }}</b><span>Configurable por votación. {% regla "RN-10" "P-05" %}</span></div></div></div>
     <div class="col-12"><div class="regla"><span class="ic">⚖</span><div style="flex:1"><b>Cómo se define el ganador: {{ votacion.modalidad|lower }}</b>
-      {% if votacion.tiene_jurado and votacion.tiene_publico %}<span>El jurado califica a cada participante y el público vota. El resultado final combina los dos. <span class="pend">RN-11 · P-06</span></span>
+      {% if votacion.es_combinado %}<span>El jurado califica a cada participante y el público vota. El resultado final combina los dos. {% regla "RN-11" "P-06" %}</span>
       <div class="peso mt-2"><div class="j" style="width:{{ votacion.peso_jurado }}%"></div><div class="p" style="width:{{ votacion.peso_publico }}%"></div></div>
       <div class="leyenda-peso mt-1"><span><i style="background:var(--sol)"></i>Jurado {{ votacion.peso_jurado }} %</span><span><i style="background:var(--rio)"></i>Tu voto {{ votacion.peso_publico }} %</span></div>
-      {% elif votacion.tiene_publico %}<span>Gana la opción con más votos del público. <span class="pend">RN-11</span></span>
-      {% else %}<span>Solo califica el jurado; el público no vota en esta votación. <span class="pend">RN-11</span></span>{% endif %}
+      <div class="aviso-propuesta mt-2"><b>Propuesta, no decisión oficial.</b> El {{ votacion.peso_jurado }}/{{ votacion.peso_publico }} lo propuso el equipo; la Fundación todavía no ha decidido si el voto del público se combina con el jurado (P-06).</div>
+      {% elif votacion.es_independiente %}<span>El jurado define el ganador oficial con su calificación. El voto del público da un reconocimiento aparte y no cambia el fallo del jurado. {% regla "RN-11" "P-06" %}</span>
+      {% elif votacion.tiene_publico %}<span>Gana la opción con más votos del público. {% regla "RN-11" %}</span>
+      {% else %}<span>Solo califica el jurado; el público no vota en esta votación. {% regla "RN-11" %}</span>{% endif %}
     </div></div></div>
   </div>
 
@@ -43,7 +46,8 @@
   {% if resultados %}
   <section class="panel-caja d-flex flex-column gap-3">
     <h2 class="h6 fw-bold m-0">Votos del público {% if votacion.estado == "abierta" %}(parciales){% endif %} · {{ total|intcomma }} votos</h2>
-    {% if votacion.tiene_jurado %}<p class="nota m-0">El resultado oficial suma también la calificación del jurado ({{ votacion.peso_jurado }} %).</p>{% endif %}
+    {% if votacion.es_combinado %}<p class="nota m-0">El resultado final suma también la calificación del jurado ({{ votacion.peso_jurado }} %, propuesta pendiente de validación).</p>
+    {% elif votacion.es_independiente %}<p class="nota m-0">Este es el reconocimiento del público. El fallo oficial lo da el jurado por separado.</p>{% endif %}
     {% for o in resultados %}
       <div><div class="d-flex justify-content-between small"><b>{{ o.nombre }}</b><span><b>{{ o.porcentaje|floatformat:1 }} %</b> · {{ o.total|intcomma }}</span></div>
       <div class="barra mt-1"><div class="{% if forloop.first %}lider{% endif %}" style="width:{{ o.porcentaje|floatformat:0 }}%"></div></div></div>

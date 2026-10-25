@@ -1,0 +1,30 @@
+{% extends "panel/base_panel.html" %}
+{% block titulo %}Ediciones{% endblock %}
+{% block panel %}
+<div><span class="eyebrow">Festival de la Leyenda Vallenata</span><h1 class="h3 fw-bold m-0">Ediciones del Festival</h1></div>
+<form method="post" class="panel-caja" novalidate>
+  {% csrf_token %}
+  <h2 class="h6 fw-bold">Nueva edición</h2>
+  <div class="row g-2">
+    <div class="col-4 col-md-2">{% include "includes/campo.html" with campo=form.anio %}</div>
+    <div class="col-4 col-md-2">{% include "includes/campo.html" with campo=form.numero %}</div>
+    <div class="col-md-8">{% include "includes/campo.html" with campo=form.nombre %}</div>
+    <div class="col-6 col-md-3">{% include "includes/campo.html" with campo=form.fecha_inicio %}</div>
+    <div class="col-6 col-md-3">{% include "includes/campo.html" with campo=form.fecha_fin %}</div>
+  </div>
+  <button class="btn btn-sol btn-sm" type="submit">+ Agregar edición</button>
+</form>
+<div class="tabla-caja table-responsive"><table class="table tabla">
+  <thead><tr><th class="num">Año</th><th>Edición</th><th class="num">Categorías</th><th class="num">Votaciones</th><th>Estado</th><th>Acciones</th></tr></thead>
+  <tbody>{% for e in ediciones %}
+    <tr><td class="num">{{ e.anio|stringformat:"d" }}</td><td><b>{{ e.nombre }}</b>{% if e.numero %}<br><span class="nota">Edición número {{ e.numero }}</span>{% endif %}</td>
+      <td class="num">{{ e.n_cat }}</td><td class="num">{{ e.n_vot }}</td>
+      <td><span class="pill {% if e.activa %}pill-abierta{% else %}pill-cerrada{% endif %}">{% if e.activa %}Activa{% else %}No activa{% endif %}</span></td>
+      <td><div class="d-flex gap-1 flex-wrap">
+        <a class="btn btn-linea btn-sm" href="{% url 'panel:edicion_editar' e.pk %}">Editar</a>
+        {% if not e.activa %}<form method="post" action="{% url 'panel:edicion_activar' e.pk %}">{% csrf_token %}<button class="btn btn-linea btn-sm">Activar</button></form>{% endif %}
+      </div></td></tr>
+  {% empty %}<tr><td colspan="6" class="text-secondary">Aún no hay ediciones.</td></tr>{% endfor %}</tbody>
+</table></div>
+<p class="nota m-0">Solo hay una edición activa: es la que ve el público en el inicio y la que se administra en Categorías y Votaciones. Las anteriores se siguen consultando en la página «Ediciones».</p>
+{% endblock %}

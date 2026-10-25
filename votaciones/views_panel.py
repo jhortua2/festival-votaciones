@@ -14,7 +14,7 @@ from auditoria.models import Registro
 from auditoria.servicios import registrar
 from cuentas.models import Usuario
 
-from .forms_panel import CategoriaForm, JuradoForm, JustificacionForm, OpcionForm, VotacionForm
+from .forms_panel import CategoriaForm, EdicionForm, JuradoForm, JustificacionForm, OpcionForm, VotacionForm
 from .models import Calificacion, Categoria, Edicion, Opcion, Votacion, Voto
 
 
@@ -57,6 +57,43 @@ def panel(request):
 
 
 # ---------------------------------------------------------------- 11. Categorías
+@solo_admin
+def ediciones(request):
+    """Registrar y consultar las ediciones anuales del Festival."""
+    form = EdicionForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        ed = form.save()
+        registrar(request, "edicion_creada", ed.nombre)
+        messages.success(request, f"Edición «{ed.nombre}» creada. Actívala para trabajar en ella.")
+        return redirect("panel:ediciones")
+    lista = Edicion.objects.annotate(n_cat=Count("categorias", distinct=True), n_vot=Count("categorias__votaciones", distinct=True))
+    return render(request, "panel/ediciones.html", {"seccion": "ediciones", "ediciones": lista, "form": form})
+
+
+@solo_admin
+def edicion_editar(request, pk):
+    ed = get_object_or_404(Edicion, pk=pk)
+    form = EdicionForm(request.POST or None, instance=ed)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        registrar(request, "edicion_editada", ed.nombre)
+        messages.success(request, "Edición actualizada.")
+        return redirect("panel:ediciones")
+    return render(request, "panel/form.html", {"seccion": "ediciones", "form": form, "titulo": f"Editar edición: {ed.nombre}", "volver": "panel:ediciones"})
+
+
+@solo_admin
+@require_POST
+def edicion_activar(request, pk):
+    """Solo una edición activa: es la que ve el público y la que se administra en el panel."""
+    ed = get_object_or_404(Edicion, pk=pk)
+    ed.activa = True
+    ed.save()
+    registrar(request, "edicion_activada", ed.nombre)
+    messages.success(request, f"«{ed.nombre}» es ahora la edición activa.")
+    return redirect("panel:ediciones")
+
+
 @solo_admin
 def categorias(request):
     edicion = _edicion(request)
@@ -255,6 +292,7 @@ def resultados(request, pk=None):
     contexto = {"seccion": "resultados", "todas": todas, "votacion": v}
     if v:
         contexto["filas"], contexto["total"] = v.resultados_ponderados()
+        contexto["ranking_publico"] = v.ranking_publico(contexto["filas"])
         contexto["n_calif"] = Calificacion.objects.filter(votacion=v).values("jurado").distinct().count()
         contexto["n_jurados"] = v.jurados.count()
         contexto["faltan"] = max(contexto["n_jurados"] - contexto["n_calif"], 0)
@@ -275,13 +313,15 @@ def resultados_csv(request, pk):
     w.writerow(["Votación", v.nombre])
     w.writerow(["Estado", v.estado_etiqueta])
     w.writerow(["Generado", timezone.localtime().strftime("%Y-%m-%d %H:%M")])
-    w.writerow(["Ponderación", f"Jurado {v.peso_jurado} % / Público {v.peso_publico} %"])
+    w.writerow(["Modo de resultado", f"{v.modalidad} (pendiente de validación, P-06)"])
     w.writerow([])
     c = lambda x: f"{x:.1f}".replace(".", ",")
-    w.writerow(["Opción", "Votos del público", "% público", "Promedio jurado", "% jurado", "Resultado final %"])
+    final = "Resultado final %" if not v.es_independiente else "Resultado final % (no aplica: modo independiente)"
+    w.writerow(["Opción", "Votos del público", "% público", "Promedio jurado", "% jurado", final])
     for o in filas:
-        w.writerow([o.nombre, o.n_votos, c(o.pct_publico), c(o.promedio) if o.promedio is not None else "", c(o.pct_jurado), c(o.final)])
-    w.writerow(["TOTAL", total, "100", "", "100", "100"])
+        w.writerow([o.nombre, o.n_votos, c(o.pct_publico), c(o.promedio) if o.promedio is not None else "",
+                    c(o.pct_jurado), c(o.final) if o.final is not None else ""])
+    w.writerow(["TOTAL", total, "100", "", "100", "100" if not v.es_independiente else ""])
     return respuesta
 
 

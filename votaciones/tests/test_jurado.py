@@ -14,7 +14,10 @@ class JuradoBase(Base):
         super().setUp()
         self.j1 = Usuario.objects.create_user(username="j1@x.co", email="j1@x.co", password="Clave-Segura-2027", rol="jurado")
         self.j2 = Usuario.objects.create_user(username="j2@x.co", email="j2@x.co", password="Clave-Segura-2027", rol="jurado")
-        self.v.jurados.set([self.j1, self.j2])  # peso_jurado = 70 por defecto
+        self.v.jurados.set([self.j1, self.j2])
+        # Estas pruebas usan el modo combinado con la propuesta 70/30 (pendiente de validación, P-06)
+        self.v.modo, self.v.peso_jurado = Votacion.Modo.COMBINADO, 70
+        self.v.save()
 
 
 class ReglasDelJurado(JuradoBase):
@@ -58,7 +61,7 @@ class ReglasDelJurado(JuradoBase):
         self.assertEqual(e.exception.motivo, "conflicto_jurado")
 
     def test_solo_jurado_no_recibe_votos_del_publico(self):  # RN-11
-        self.v.peso_jurado = 100
+        self.v.modo = Votacion.Modo.JURADO
         self.v.save()
         with self.assertRaises(VotoRechazado) as e:
             emitir_voto(self.ana, self.a.pk)
@@ -83,9 +86,10 @@ class ReglasDelJurado(JuradoBase):
         self.assertEqual(filas[0].pk, self.b.pk)  # el jurado le da la vuelta al público
         self.assertAlmostEqual(sum(o.final for o in filas), 100)
 
-    def test_peso_mayor_a_100_rechazado_por_la_base_de_datos(self):
-        with self.assertRaises(IntegrityError), transaction.atomic():
-            Votacion.objects.filter(pk=self.v.pk).update(peso_jurado=120)
+    def test_peso_fuera_de_1_a_99_rechazado_por_la_base_de_datos(self):
+        for malo in (0, 100, 120):
+            with self.assertRaises(IntegrityError), transaction.atomic():
+                Votacion.objects.filter(pk=self.v.pk).update(peso_jurado=malo)
 
     def test_publicar_con_jurado_exige_jurados(self):  # RN-13
         v = self.crear_votacion(nombre="Sin jurados", publicada=False)

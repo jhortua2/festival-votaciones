@@ -6,6 +6,9 @@ app_name = "panel"
 
 urlpatterns = [
     path("", v.panel, name="panel"),
+    path("ediciones/", v.ediciones, name="ediciones"),
+    path("ediciones/<int:pk>/editar/", v.edicion_editar, name="edicion_editar"),
+    path("ediciones/<int:pk>/activar/", v.edicion_activar, name="edicion_activar"),
     path("categorias/", v.categorias, name="categorias"),
     path("categorias/<int:pk>/editar/", v.categoria_editar, name="categoria_editar"),
     path("categorias/<int:pk>/estado/", v.categoria_estado, name="categoria_estado"),

@@ -6,6 +6,7 @@ app_name = "votaciones"
 
 urlpatterns = [
     path("", views.inicio, name="inicio"),
+    path("ediciones/", views.ediciones, name="ediciones"),
     path("categorias/", views.categorias, name="categorias"),
     path("categorias/<int:pk>/", views.categoria_detalle, name="categoria"),
     path("votaciones/<int:pk>/", views.votacion_detalle, name="detalle"),

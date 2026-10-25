@@ -1,7 +1,7 @@
 from django import forms
 from django.conf import settings
 
-from .models import Categoria, Opcion, Votacion
+from .models import Categoria, Edicion, Opcion, Votacion
 
 
 class _Estilo:
@@ -38,13 +38,33 @@ class CategoriaForm(_Estilo, forms.ModelForm):
         return nombre
 
 
+class EdicionForm(_Estilo, forms.ModelForm):
+    """Ediciones anuales del Festival (Entrega 2). La edición activa es la que ve el público."""
+
+    class Meta:
+        model = Edicion
+        fields = ["anio", "numero", "nombre", "fecha_inicio", "fecha_fin"]
+        widgets = {
+            "fecha_inicio": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "fecha_fin": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+        }
+        help_texts = {"fecha_inicio": "Pendiente de validación.", "fecha_fin": "Pendiente de validación."}
+
+    def clean(self):
+        datos = super().clean()
+        ini, fin = datos.get("fecha_inicio"), datos.get("fecha_fin")
+        if ini and fin and fin < ini:
+            self.add_error("fecha_fin", "La fecha de fin no puede ser anterior a la de inicio.")
+        return datos
+
+
 class VotacionForm(_Estilo, forms.ModelForm):
     class Meta:
         model = Votacion
         fields = ["categoria", "nombre", "descripcion", "apertura", "cierre", "frecuencia", "visibilidad",
-                  "peso_jurado", "escala_maxima", "jurados"]
+                  "modo", "peso_jurado", "escala_maxima", "jurados"]
         widgets = {
-            "peso_jurado": forms.NumberInput(attrs={"min": 0, "max": 100, "step": 5}),
+            "peso_jurado": forms.NumberInput(attrs={"min": 1, "max": 99, "step": 5}),
             "escala_maxima": forms.NumberInput(attrs={"min": 2, "max": 100}),
             "jurados": forms.CheckboxSelectMultiple,
             "apertura": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
@@ -54,7 +74,8 @@ class VotacionForm(_Estilo, forms.ModelForm):
         help_texts = {
             "frecuencia": "Pendiente de validación con el cliente (RN-06 / P-03).",
             "visibilidad": "Pendiente de validación con el cliente (RN-10 / P-05).",
-            "peso_jurado": "0 = solo público · 100 = solo jurado. Propuesta 70 (jurado 70 % + público 30 %), pendiente de validación (RN-11 / P-06).",
+            "modo": "Pendiente de validación (RN-11 / P-06): la Fundación debe decidir si el voto del público se combina con el jurado o va aparte.",
+            "peso_jurado": "Solo se usa en modo combinado. Propuesta del equipo: 70 (jurado 70 % + público 30 %), pendiente de validación (P-06).",
             "jurados": "Solo los jurados marcados pueden calificar esta votación (RN-13). Se crean en «Jurados».",
         }
 
@@ -66,7 +87,7 @@ class VotacionForm(_Estilo, forms.ModelForm):
             self.fields[f].input_formats = ["%Y-%m-%dT%H:%M"]
         if self.instance.pk and (self.instance.votos.exists() or self.instance.calificaciones.exists()):
             # Con votos o calificaciones no se cambian las reglas del juego
-            for f in ("frecuencia", "categoria", "apertura", "peso_jurado", "escala_maxima"):
+            for f in ("frecuencia", "categoria", "apertura", "modo", "peso_jurado", "escala_maxima"):
                 self.fields[f].disabled = True
 
 

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titulo %}Ediciones{% endblock %}
+{% block contenido %}
+<div class="container-lg py-4 d-flex flex-column gap-3">
+  <nav class="small text-secondary"><a href="{% url 'votaciones:inicio' %}">Inicio</a> › <b class="text-body">Ediciones</b></nav>
+  <div><h1 class="h-display m-0" style="font-size:2rem">Ediciones del Festival</h1>
+    <p class="text-secondary m-0">Cada año del Festival tiene sus propias categorías y votaciones. Aquí puedes consultar la edición activa y las anteriores.</p></div>
+  <div class="d-flex flex-column gap-3">
+    {% for e in ediciones %}
+    <section class="panel-caja d-flex flex-column gap-2">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div><span class="eyebrow">{{ e.anio|stringformat:"d" }}{% if e.numero %} · Edición {{ e.numero }}{% endif %}</span>
+          <h2 class="h5 fw-bold m-0">{{ e.nombre }}</h2></div>
+        {% if e.activa %}<span class="pill pill-abierta">Edición activa</span>{% else %}<span class="pill pill-cerrada">Edición anterior</span>{% endif %}
+      </div>
+      <p class="nota m-0">{{ e.cats|length }} categoría{{ e.cats|length|pluralize }} · {{ e.n_vot }} {% if e.n_vot == 1 %}votación publicada{% else %}votaciones publicadas{% endif %}{% if e.fecha_inicio %} · del {{ e.fecha_inicio|date:"j M" }} al {{ e.fecha_fin|date:"j M Y" }}{% endif %}</p>
+      {% if e.cats %}<div class="d-flex flex-wrap gap-2">
+        {% for c in e.cats %}<a class="btn btn-linea btn-sm" href="{% url 'votaciones:categoria' c.pk %}">{{ c.nombre }} →</a>{% endfor %}
+      </div>{% endif %}
+    </section>
+    {% empty %}<div class="ejemplo">Aún no hay ediciones registradas.</div>{% endfor %}
+  </div>
+</div>
+{% endblock %}

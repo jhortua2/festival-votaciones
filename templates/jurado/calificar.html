@@ -33,6 +33,6 @@
       <button class="btn btn-sol btn-lg align-self-start" type="submit">Enviar calificación</button>
     {% endif %}
   </form>
-  <p class="nota m-0">Tu calificación pesa el {{ votacion.peso_jurado }} % del resultado final; el voto del público, el {{ votacion.peso_publico }} %. <span class="pend">P-06</span></p>
+  <p class="nota m-0">{% if votacion.es_combinado %}Tu calificación pesa el {{ votacion.peso_jurado }} % del resultado final; el voto del público, el {{ votacion.peso_publico }} %. {% regla "RN-11" "P-06" %}{% elif votacion.es_independiente %}Tu calificación define el fallo oficial. El voto del público es un reconocimiento aparte y no se mezcla con el tuyo. {% regla "RN-11" "P-06" %}{% else %}Solo el jurado define el resultado de esta votación. {% regla "RN-11" %}{% endif %}</p>
 </div>
 {% endblock %}
