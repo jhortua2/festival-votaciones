@@ -1,0 +1,50 @@
+# Corre las pruebas automáticas en cada push y pull request, contra un MySQL 8 real.
+# Así cualquiera (también el docente) puede ver en la pestaña "Actions" que las pruebas pasan.
+name: Pruebas
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: solo_para_ci
+          MYSQL_DATABASE: festival_votaciones
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -psolo_para_ci"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      # Base de datos temporal de GitHub: se crea y se borra en cada ejecución.
+      DB_ENGINE: mysql
+      DB_NAME: festival_votaciones
+      DB_USER: root
+      DB_PASSWORD: solo_para_ci
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+      DJANGO_DEBUG: "0"
+      DJANGO_SECRET_KEY: clave-temporal-de-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+      - name: Revisar el proyecto
+        run: python manage.py check
+      - name: Revisar que no falten migraciones
+        run: python manage.py makemigrations --check --dry-run
+      - name: Crear las tablas en MySQL
+        run: python manage.py migrate
+      - name: Cargar los datos de prueba
+        run: python manage.py cargar_demo
+      - name: Correr las pruebas
+        run: python manage.py test --verbosity 2
