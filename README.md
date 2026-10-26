@@ -192,7 +192,7 @@ Cuando la Fundación apruebe una regla, se cambia a `APROBADA` en `votaciones/re
 | Validar si el voto del público es independiente o combinado; el 70/30 no es oficial | Modo de resultado configurable por votación (por defecto **independiente**). El 70/30 aparece como «Propuesta, no decisión oficial». Sigue la pregunta P-06 para la Fundación |
 | Modelo conceptual con asignación de jurados y auditoría | Diagrama actualizado con las entidades *Asignación de jurado* y *Auditoría* |
 | Diferenciar reglas del cliente de las propuestas | Etiquetas **Enunciado / Propuesta** en las pantallas y columna *Origen* en el documento y en este README |
-| Acceso al repositorio y evidencias reproducibles | Docente invitado al repositorio, pasos de instalación, datos de prueba y pruebas automáticas en GitHub Actions con MySQL |
+| Acceso al repositorio y evidencias reproducibles | Repositorio público, sin inicio de sesión; pasos de instalación, datos de prueba y pruebas automáticas en GitHub Actions con MySQL |
 | Interfaces que pedían credenciales | Prototipo y mockups publicados en un enlace abierto, sin inicio de sesión |
 
 ## 10. Problemas comunes
