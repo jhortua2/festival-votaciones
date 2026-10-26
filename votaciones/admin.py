@@ -21,6 +21,8 @@ class CategoriaAdmin(admin.ModelAdmin):
 class OpcionInline(admin.TabularInline):
     model = Opcion
     extra = 0
+    # Solo los campos principales, para que la tabla de opciones quepa en pantalla.
+    fields = ("nombre", "detalle", "orden", "activa")
 
 
 @admin.register(Votacion)
