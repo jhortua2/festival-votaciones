@@ -68,7 +68,7 @@ py manage.py cargar_demo
 
 - **2 ediciones**: 2026 (número 59, ya pasada) y 2027 (número 60, la activa);
 - 4 categorías y 6 votaciones (abiertas, próxima, cerradas y un borrador), con sus opciones;
-- 60 votantes de prueba con votos, 3 jurados y sus calificaciones;
+- tres usuarios de prueba, uno por rol (administrador, jurado y votante), con un par de votos y calificaciones en las votaciones cerradas;
 - los dos modos de resultado: **combinado** en «Mejor canción inédita» e **independiente** en «Grupo de piloneras favorito».
 
 Para volver a empezar desde cero: `py manage.py cargar_demo --reiniciar`
@@ -96,8 +96,8 @@ Los crea `cargar_demo`. Son **datos de prueba** sin información real; no sirven
 | Rol | Correo | Contraseña |
 |---|---|---|
 | Administrador | `admin@festival.test` | `Festival2027!` |
-| Votante | `ana@festival.test` | `Vallenato2027!` |
-| Jurado | `jurado1@festival.test` (también `jurado2@` y `jurado3@`) | `Jurado2027!` |
+| Votante | `votante@festival.test` | `Vallenato2027!` |
+| Jurado | `jurado@festival.test` | `Jurado2027!` |
 
 ## 6. Pruebas automáticas
 

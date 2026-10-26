@@ -5,7 +5,6 @@ votaciones y opciones NO están aprobadas por el cliente (Entrega 1).
 Las fechas se calculan a partir de hoy para que siempre haya votaciones
 abiertas, próximas y cerradas.
 """
-import random
 from datetime import timedelta
 
 from django.core.management.base import BaseCommand
@@ -17,10 +16,9 @@ from cuentas.models import Usuario
 from votaciones.models import Calificacion, Categoria, Edicion, Opcion, Votacion, Voto
 
 ADMIN = ("admin@festival.test", "Festival2027!")
-VOTANTE = ("ana@festival.test", "Vallenato2027!")
-JURADOS = [("jurado1@festival.test", "Rafael", "Calderón"), ("jurado2@festival.test", "Leandro", "Mejía"),
-           ("jurado3@festival.test", "Rosa", "Ochoa")]
-CLAVE_JURADO = "Jurado2027!"
+VOTANTE = ("votante@festival.test", "Vallenato2027!")
+JURADO = ("jurado@festival.test", "Jurado2027!")
+# Datos de prueba: la base queda solo con tres usuarios, uno por rol.
 
 
 class Command(BaseCommand):
@@ -28,10 +26,9 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--reiniciar", action="store_true", help="Borra los datos de votaciones antes de cargar.")
-        parser.add_argument("--votantes", type=int, default=60, help="Cantidad de votantes de prueba con votos (defecto 60).")
 
     @transaction.atomic
-    def handle(self, *args, reiniciar=False, votantes=60, **opts):
+    def handle(self, *args, reiniciar=False, **opts):
         if reiniciar:
             Calificacion.objects.all().delete()
             Voto.objects.all().delete()
@@ -40,15 +37,14 @@ class Command(BaseCommand):
             Categoria.objects.all().delete()
             Edicion.objects.all().delete()
             Registro.objects.all().delete()
-            Usuario.objects.filter(email__endswith="@festival.test").delete()
-            self.stdout.write("Datos anteriores borrados.")
+            Usuario.objects.all().delete()  # la base queda solo con los tres usuarios de prueba
+            self.stdout.write("Datos anteriores borrados (también todos los usuarios).")
 
         if Edicion.objects.filter(anio=2027).exists():
             self.stdout.write(self.style.WARNING("Ya hay datos de la edición 2027. Use --reiniciar para volver a cargarlos."))
             self._credenciales()
             return
 
-        random.seed(2027)
         ahora = timezone.now()
         dia = timedelta(days=1)
 
@@ -63,14 +59,12 @@ class Command(BaseCommand):
         })
         ana.set_password(VOTANTE[1]); ana.save()
 
-        jurados = []
-        for correo, nombre, apellido in JURADOS:
-            j, _ = Usuario.objects.get_or_create(email=correo, defaults={
-                "username": correo, "first_name": nombre, "last_name": apellido, "rol": Usuario.Rol.JURADO,
-                "acepto_tratamiento_datos": True,
-            })
-            j.set_password(CLAVE_JURADO); j.save()
-            jurados.append(j)
+        jurado, _ = Usuario.objects.get_or_create(email=JURADO[0], defaults={
+            "username": JURADO[0], "first_name": "Rafael", "last_name": "Calderón", "rol": Usuario.Rol.JURADO,
+            "acepto_tratamiento_datos": True,
+        })
+        jurado.set_password(JURADO[1]); jurado.save()
+        jurados = [jurado]
 
         # Dos ediciones para mostrar que el sistema maneja varios años: la 2026 ya pasó y la 2027 es la activa.
         ed26 = Edicion.objects.create(anio=2026, numero=59, nombre="Festival de la Leyenda Vallenata 2026", activa=False)
@@ -114,26 +108,16 @@ class Command(BaseCommand):
         Votacion.objects.filter(pk=aire26.pk).update(modo=M.PUBLICO)
         Opcion.objects.create(votacion=borrador, nombre="Comparsa de ejemplo", detalle="Desfile", color="#35B2A1")
 
-        # Votantes de prueba y votos (bypass del servicio solo para sembrar datos)
-        usuarios = [Usuario(username=f"votante{i:03d}@festival.test", email=f"votante{i:03d}@festival.test",
-                            first_name=f"Votante {i}", acepto_tratamiento_datos=True) for i in range(1, votantes + 1)]
-        for u in usuarios:
-            u.set_unusable_password()
-        Usuario.objects.bulk_create(usuarios)
-        usuarios = list(Usuario.objects.filter(email__startswith="votante"))
+        # Votos de ejemplo: solo los del votante de prueba en las votaciones ya cerradas, para que haya
+        # algo que consultar en el histórico. Las votaciones abiertas quedan libres para votar en la demo.
+        self._votar(piloneras, ana, 1, piloneras.cierre - dia)
+        self._votar(aire26, ana, 0, aire26.cierre - dia)
 
-        self._sembrar(cancion, usuarios, [5, 4, 2.5, 1.5], ahora)
-        self._sembrar(aire, usuarios, [4, 3, 2, 3], ahora)
-        self._sembrar(piloneras, usuarios, [3, 5, 2], piloneras.cierre - dia)
-        self._sembrar(aire26, usuarios, [5, 2, 2, 3], aire26.cierre - dia)
-
-        # Calificaciones del jurado (bypass del servicio solo para sembrar datos).
-        # En "Canción favorita" falta un jurado por calificar, para mostrar resultados parciales.
-        self._calificar(cancion, jurados[:2], [[7, 9, 8, 6], [6, 9, 7, 5]], ahora)
-        self._calificar(piloneras, jurados, [[8, 7, 9], [9, 6, 9], [8, 7, 10]], piloneras.cierre - dia)
+        # Calificación del jurado en la votación cerrada (bypass del servicio solo para sembrar datos).
+        self._calificar(piloneras, jurados, [[8, 7, 9]], piloneras.cierre - dia)
 
         Registro.objects.create(usuario=admin, accion="datos_demo", detalle="Carga de datos de ejemplo")
-        self.stdout.write(self.style.SUCCESS(f"Datos de ejemplo cargados: 2 ediciones, {Categoria.objects.count()} categorías, {Votacion.objects.count()} votaciones, {Voto.objects.count()} votos, {len(jurados)} jurados y {Calificacion.objects.count()} calificaciones."))
+        self.stdout.write(self.style.SUCCESS(f"Datos de ejemplo cargados: 2 ediciones, {Categoria.objects.count()} categorías, {Votacion.objects.count()} votaciones, {Voto.objects.count()} votos, {Usuario.objects.count()} usuarios y {Calificacion.objects.count()} calificaciones."))
         self._credenciales()
 
     def _votacion(self, cat, nombre, desc, apertura, cierre, frecuencia, visibilidad, opciones):
@@ -143,15 +127,9 @@ class Command(BaseCommand):
             Opcion.objects.create(votacion=v, nombre=n, detalle=d, color=c, orden=i)
         return v
 
-    def _sembrar(self, votacion, usuarios, pesos, momento):
-        opciones = list(votacion.opciones.order_by("orden"))
-        clave = timezone.localtime(momento).date().isoformat() if votacion.frecuencia == Votacion.Frecuencia.DIARIA else "unica"
-        votantes = random.sample(usuarios, k=int(len(usuarios) * 0.85))
-        Voto.objects.bulk_create([
-            Voto(usuario=u, votacion=votacion, opcion=random.choices(opciones, weights=pesos)[0],
-                 clave_frecuencia=clave, fecha=momento - timedelta(minutes=random.randint(0, 600)))
-            for u in votantes
-        ])
+    def _votar(self, votacion, usuario, indice, momento):
+        opcion = list(votacion.opciones.order_by("orden"))[indice]
+        Voto.objects.create(usuario=usuario, votacion=votacion, opcion=opcion, clave_frecuencia="unica", fecha=momento)
 
     def _calificar(self, votacion, jurados, tablas, momento):
         opciones = list(votacion.opciones.order_by("orden"))
@@ -162,8 +140,9 @@ class Command(BaseCommand):
 
     def _credenciales(self):
         self.stdout.write("")
+        self.stdout.write("  Usuarios de prueba (no son credenciales reales):")
         self.stdout.write("  Administrador:  " + ADMIN[0] + "  /  " + ADMIN[1])
         self.stdout.write("  Votante:        " + VOTANTE[0] + "  /  " + VOTANTE[1])
-        self.stdout.write("  Jurados:        jurado1@ · jurado2@ · jurado3@festival.test  /  " + CLAVE_JURADO)
+        self.stdout.write("  Jurado:         " + JURADO[0] + "  /  " + JURADO[1])
         self.stdout.write("  Arranque con:   py manage.py runserver 8888")
         self.stdout.write("  Sitio: http://localhost:8888   Panel: http://localhost:8888/panel/")
