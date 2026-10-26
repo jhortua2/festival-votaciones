@@ -66,9 +66,9 @@ py manage.py cargar_demo
 
 `migrate` crea todas las tablas en MySQL. `cargar_demo` carga:
 
-- **2 ediciones**: 2026 (número 59, ya pasada) y 2027 (número 60, la activa);
-- 4 categorías y 6 votaciones (abiertas, próxima, cerradas y un borrador), con sus opciones;
-- tres usuarios de prueba, uno por rol (administrador, jurado y votante), con un par de votos y calificaciones en las votaciones cerradas;
+- **1 edición**: 2027 (número 60, la activa). Las demás ediciones se registran desde Django Admin o el panel;
+- 3 categorías y 5 votaciones (abiertas, próxima, cerrada y un borrador), con sus opciones;
+- tres usuarios de prueba, uno por rol (administrador, jurado y votante), con un voto y las calificaciones del jurado en la votación cerrada;
 - los dos modos de resultado: **combinado** en «Mejor canción inédita» e **independiente** en «Grupo de piloneras favorito».
 
 Para volver a empezar desde cero: `py manage.py cargar_demo --reiniciar`

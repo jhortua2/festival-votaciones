@@ -22,7 +22,7 @@ JURADO = ("jurado@festival.test", "Jurado2027!")
 
 
 class Command(BaseCommand):
-    help = "Carga datos de ejemplo (ediciones 2026 y 2027, categorías, votaciones, opciones, usuarios y votos)."
+    help = "Carga datos de ejemplo (edición 2027, categorías, votaciones, opciones, usuarios y votos)."
 
     def add_arguments(self, parser):
         parser.add_argument("--reiniciar", action="store_true", help="Borra los datos de votaciones antes de cargar.")
@@ -66,8 +66,7 @@ class Command(BaseCommand):
         jurado.set_password(JURADO[1]); jurado.save()
         jurados = [jurado]
 
-        # Dos ediciones para mostrar que el sistema maneja varios años: la 2026 ya pasó y la 2027 es la activa.
-        ed26 = Edicion.objects.create(anio=2026, numero=59, nombre="Festival de la Leyenda Vallenata 2026", activa=False)
+        # Solo la edición activa. Otras ediciones se registran desde el Admin o el panel (RF-03).
         ed = Edicion.objects.create(anio=2027, numero=60, nombre="Festival de la Leyenda Vallenata 2027", activa=True)
 
         musica = Categoria.objects.create(edicion=ed, nombre="Música", descripcion="Canciones y presentaciones en tarima", orden=1, icono="acordeon", color="#F4B400")
@@ -100,24 +99,17 @@ class Command(BaseCommand):
         for v in Votacion.objects.exclude(modo=M.PUBLICO):
             v.jurados.set(jurados)
 
-        # Edición 2026 (ya pasada), con una votación cerrada del público para consultar el histórico.
-        musica26 = Categoria.objects.create(edicion=ed26, nombre="Música", descripcion="Votaciones de la edición 59", orden=1, icono="acordeon", color="#F4B400")
-        aire26 = self._votacion(musica26, "Tu aire favorito 2026", "Votación de ejemplo de la edición anterior. Solo del público.",
-                                ahora - 180 * dia, ahora - 175 * dia, F.UNA_VEZ, V.AL_CIERRE, [
-                                    ("Paseo", "Aire", "#F4B400"), ("Merengue", "Aire", "#E23D32"), ("Son", "Aire", "#35B2A1"), ("Puya", "Aire", "#7A5CFF")])
-        Votacion.objects.filter(pk=aire26.pk).update(modo=M.PUBLICO)
         Opcion.objects.create(votacion=borrador, nombre="Comparsa de ejemplo", detalle="Desfile", color="#35B2A1")
 
-        # Votos de ejemplo: solo los del votante de prueba en las votaciones ya cerradas, para que haya
+        # Votos de ejemplo: solo los del votante de prueba en la votación ya cerrada, para que haya
         # algo que consultar en el histórico. Las votaciones abiertas quedan libres para votar en la demo.
         self._votar(piloneras, ana, 1, piloneras.cierre - dia)
-        self._votar(aire26, ana, 0, aire26.cierre - dia)
 
         # Calificación del jurado en la votación cerrada (bypass del servicio solo para sembrar datos).
         self._calificar(piloneras, jurados, [[8, 7, 9]], piloneras.cierre - dia)
 
         Registro.objects.create(usuario=admin, accion="datos_demo", detalle="Carga de datos de ejemplo")
-        self.stdout.write(self.style.SUCCESS(f"Datos de ejemplo cargados: 2 ediciones, {Categoria.objects.count()} categorías, {Votacion.objects.count()} votaciones, {Voto.objects.count()} votos, {Usuario.objects.count()} usuarios y {Calificacion.objects.count()} calificaciones."))
+        self.stdout.write(self.style.SUCCESS(f"Datos de ejemplo cargados: {Edicion.objects.count()} edición, {Categoria.objects.count()} categorías, {Votacion.objects.count()} votaciones, {Voto.objects.count()} voto(s), {Usuario.objects.count()} usuarios y {Calificacion.objects.count()} calificaciones."))
         self._credenciales()
 
     def _votacion(self, cat, nombre, desc, apertura, cierre, frecuencia, visibilidad, opciones):

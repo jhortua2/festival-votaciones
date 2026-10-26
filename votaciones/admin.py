@@ -5,7 +5,11 @@ from .models import Calificacion, Categoria, Edicion, Opcion, Votacion, Voto
 
 @admin.register(Edicion)
 class EdicionAdmin(admin.ModelAdmin):
-    list_display = ("nombre", "anio", "numero", "activa")
+    list_display = ("nombre", "anio_sin_punto", "numero", "activa")
+
+    @admin.display(description="año", ordering="anio")
+    def anio_sin_punto(self, obj):
+        return str(obj.anio)  # evita que el año se vea como "2.027"
 
 
 @admin.register(Categoria)
