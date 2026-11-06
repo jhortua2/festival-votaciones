@@ -7,7 +7,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .models import Categoria, Edicion, Opcion, Votacion, Voto
-from .servicios import VotoRechazado, emitir_voto, ya_voto
+from .forms import VotoForm
+from .servicios import VotoRechazado, emitir_voto, voto_en_categoria
 
 
 def _votaciones_publicas():
@@ -66,7 +67,7 @@ def votacion_detalle(request, pk):
     votacion = _votacion_publica(pk)
     contexto = {
         "votacion": votacion,
-        "ya_voto": ya_voto(request.user, votacion),
+        "voto_categoria": voto_en_categoria(request.user, votacion.categoria),
         "n_opciones": votacion.opciones_activas().count(),
         "es_jurado_aqui": request.user.is_authenticated and votacion.jurados.filter(pk=request.user.pk).exists(),
     }
@@ -81,28 +82,38 @@ def votacion_opciones(request, pk):
     return render(request, "votaciones/opciones.html", {
         "votacion": votacion,
         "opciones": votacion.opciones_activas(),
-        "ya_voto": ya_voto(request.user, votacion),
+        "voto_categoria": voto_en_categoria(request.user, votacion.categoria),
     })
 
 
 @login_required
 def confirmar(request, pk):
-    """Pantalla 8 · CU-04 pasos 2-3: confirmar. Con POST se emite el voto."""
+    """Pantalla 8 · CU-04 pasos 2-3: confirmar. Con POST (formulario + CSRF) se emite el voto."""
     votacion = _votacion_publica(pk)
-    opcion_id = request.POST.get("opcion") or request.GET.get("opcion")
-    if not opcion_id:
+    datos = request.POST if request.method == "POST" else request.GET
+    if not datos.get("opcion"):
         messages.warning(request, "Elige una opción antes de votar.")
         return redirect("votaciones:opciones", pk=pk)
-    opcion = get_object_or_404(Opcion, pk=opcion_id, votacion=votacion)
 
-    if request.method == "POST" and request.POST.get("confirmado") == "1":
+    form = VotoForm(votacion, datos, exigir_confirmacion=request.method == "POST")
+    if not form.is_valid():
+        if "opcion" in form.errors:
+            # CP-06: la opción no existe o pertenece a otra votación/categoría
+            return render(request, "votaciones/rechazo.html", {
+                "votacion": votacion, "motivo": "opcion_invalida", "mensaje": form.errors["opcion"][0],
+            }, status=400)
+        opcion = Opcion.objects.get(pk=datos.get("opcion"))
+        return render(request, "votaciones/confirmacion.html", {"votacion": votacion, "opcion": opcion, "form": form})
+
+    opcion = form.cleaned_data["opcion"]
+    if request.method == "POST":
         try:
-            voto = emitir_voto(request.user, opcion.pk, request)
+            voto = emitir_voto(request.user, opcion.pk, request, votacion=votacion)
         except VotoRechazado as e:
             return render(request, "votaciones/rechazo.html", {"votacion": votacion, "motivo": e.motivo, "mensaje": e.mensaje}, status=409)
         return redirect("votaciones:comprobante", codigo=voto.codigo)
 
-    return render(request, "votaciones/confirmacion.html", {"votacion": votacion, "opcion": opcion})
+    return render(request, "votaciones/confirmacion.html", {"votacion": votacion, "opcion": opcion, "form": form})
 
 
 @login_required

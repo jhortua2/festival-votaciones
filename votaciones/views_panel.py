@@ -95,6 +95,22 @@ def edicion_activar(request, pk):
 
 
 @solo_admin
+@require_POST
+def edicion_eliminar(request, pk):
+    """Solo se elimina una edición vacía y que no sea la activa; si no, se conserva su historial."""
+    ed = get_object_or_404(Edicion, pk=pk)
+    if ed.activa:
+        messages.error(request, "No se puede eliminar la edición activa. Activa otra edición primero.")
+    elif ed.categorias.exists():
+        messages.error(request, f"No se puede eliminar «{ed.nombre}»: tiene categorías. Elimínalas primero.")
+    else:
+        registrar(request, "edicion_eliminada", ed.nombre)
+        ed.delete()
+        messages.success(request, f"Edición «{ed.nombre}» eliminada.")
+    return redirect("panel:ediciones")
+
+
+@solo_admin
 def categorias(request):
     edicion = _edicion(request)
     form = CategoriaForm(request.POST or None, edicion=edicion)
@@ -135,6 +151,20 @@ def categoria_estado(request, pk):
     request.session.pop("confirmar_categoria", None)
     registrar(request, "categoria_activada" if cat.activa else "categoria_inactivada", cat.nombre)
     messages.success(request, "Categoría activada." if cat.activa else "Categoría inactivada.")
+    return redirect("panel:categorias")
+
+
+@solo_admin
+@require_POST
+def categoria_eliminar(request, pk):
+    """Solo se elimina una categoría sin votaciones. Si tiene votaciones, se inactiva (así no se pierden votos)."""
+    cat = get_object_or_404(Categoria, pk=pk)
+    if cat.votaciones.exists():
+        messages.error(request, f"No se puede eliminar «{cat.nombre}»: tiene votaciones. Elimínalas primero o inactiva la categoría.")
+    else:
+        registrar(request, "categoria_eliminada", cat.nombre)
+        cat.delete()
+        messages.success(request, f"Categoría «{cat.nombre}» eliminada.")
     return redirect("panel:categorias")
 
 
@@ -197,6 +227,20 @@ def votacion_cerrar(request, pk):
 
 
 # ---------------------------------------------------------------- 13. Opciones
+@solo_admin
+@require_POST
+def votacion_eliminar(request, pk):
+    """Solo se elimina una votación sin votos ni calificaciones (RN-05: los votos no se borran)."""
+    v = get_object_or_404(Votacion, pk=pk)
+    if v.votos.exists() or v.calificaciones.exists():
+        messages.error(request, f"No se puede eliminar «{v.nombre}»: ya tiene votos o calificaciones. Ciérrala en su lugar.")
+    else:
+        registrar(request, "votacion_eliminada", f"{v.categoria.nombre} · {v.nombre}")
+        v.delete()  # sus opciones se eliminan con ella
+        messages.success(request, f"Votación «{v.nombre}» eliminada.")
+    return redirect("panel:votaciones")
+
+
 @solo_admin
 def opciones(request, pk):
     v = get_object_or_404(Votacion.objects.select_related("categoria"), pk=pk)
@@ -323,6 +367,28 @@ def resultados_csv(request, pk):
                     c(o.pct_jurado), c(o.final) if o.final is not None else ""])
     w.writerow(["TOTAL", total, "100", "", "100", "100" if not v.es_independiente else ""])
     return respuesta
+
+
+@solo_admin
+def votos(request):
+    """Consulta administrativa de votos (Entrega 3 · CP-08): lo mismo que está en la tabla votaciones_voto."""
+    edicion = _edicion(request)
+    lista = Voto.objects.filter(edicion=edicion).select_related("usuario", "categoria", "votacion", "opcion")
+    cat_id, vot_id, buscar = request.GET.get("categoria"), request.GET.get("votacion"), request.GET.get("q", "").strip()
+    if cat_id and cat_id.isdigit():
+        lista = lista.filter(categoria_id=cat_id)
+    if vot_id and vot_id.isdigit():
+        lista = lista.filter(votacion_id=vot_id)
+    if buscar:
+        lista = lista.filter(Q(codigo__icontains=buscar) | Q(usuario__email__icontains=buscar))
+    por_categoria = (Voto.objects.filter(edicion=edicion).values("categoria__nombre")
+                     .annotate(n=Count("id"), votantes=Count("usuario", distinct=True)).order_by("categoria__nombre"))
+    return render(request, "panel/votos.html", {
+        "seccion": "votos", "votos": lista[:500], "total": lista.count(), "edicion": edicion,
+        "categorias": Categoria.objects.filter(edicion=edicion).order_by("orden", "nombre"),
+        "votaciones": Votacion.objects.filter(categoria__edicion=edicion).order_by("categoria__orden", "nombre"),
+        "por_categoria": por_categoria, "f_cat": cat_id or "", "f_vot": vot_id or "", "q": buscar,
+    })
 
 
 @solo_admin

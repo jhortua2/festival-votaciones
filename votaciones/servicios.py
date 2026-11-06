@@ -2,7 +2,6 @@
 
 Se aplican aquí y no en las plantillas (RNF-11)."""
 from django.db import IntegrityError, transaction
-from django.utils import timezone
 
 from auditoria.servicios import ip_de, registrar
 
@@ -18,31 +17,47 @@ class VotoRechazado(Exception):
         self.mensaje = mensaje
 
 
-def clave_frecuencia(votacion, momento=None):
-    if votacion.frecuencia == Votacion.Frecuencia.DIARIA:
-        momento = timezone.localtime(momento or timezone.now())
-        return momento.date().isoformat()
-    return "unica"
+def voto_en_categoria(usuario, categoria):
+    """Voto del usuario en esa categoría y su edición, o None (RN-06: uno por categoría y edición)."""
+    if not usuario.is_authenticated:
+        return None
+    return (Voto.objects.select_related("votacion", "opcion")
+            .filter(usuario=usuario, categoria=categoria, edicion_id=categoria.edicion_id).first())
 
 
 def ya_voto(usuario, votacion):
-    if not usuario.is_authenticated:
-        return False
-    return Voto.objects.filter(usuario=usuario, votacion=votacion, clave_frecuencia=clave_frecuencia(votacion)).exists()
+    """True si el usuario ya votó en la categoría de esta votación (en cualquiera de sus votaciones)."""
+    return voto_en_categoria(usuario, votacion.categoria) is not None
 
 
-def emitir_voto(usuario, opcion_id, request=None):
-    """Registra un voto o lanza VotoRechazado. Cubre RN-02, RN-03, RN-04, RN-06 y RF-09."""
+def emitir_voto(usuario, opcion_id, request=None, votacion=None):
+    """Registra un voto o lanza VotoRechazado.
+
+    Validaciones del servidor (Entrega 3):
+    - usuario autenticado (CP-04);
+    - la opción existe, está activa y pertenece a la votación que se está mostrando (CP-06);
+    - la votación está publicada y abierta, y su categoría y edición están activas (CP-05);
+    - un solo voto por usuario, categoría y edición (CP-02). La restricción única de MySQL
+      `un_voto_por_usuario_categoria_edicion` respalda esta regla ante solicitudes simultáneas (CP-09).
+    """
     if not usuario.is_authenticated:
         raise VotoRechazado("sin_sesion", "Debes iniciar sesión para votar.")
 
     with transaction.atomic():
         try:
-            opcion = Opcion.objects.select_related("votacion").get(pk=opcion_id)
-        except Opcion.DoesNotExist:
+            opcion = Opcion.objects.select_related("votacion__categoria__edicion").get(pk=opcion_id)
+        except (Opcion.DoesNotExist, ValueError, TypeError):
             raise VotoRechazado("opcion_invalida", "La opción que elegiste no existe.")
 
+        if votacion is not None and opcion.votacion_id != votacion.pk:
+            _rechazo(request, usuario, votacion, "opcion_de_otra_votacion")
+            raise VotoRechazado("opcion_invalida", "La opción enviada no pertenece a esta votación ni a su categoría.")
+
         votacion = opcion.votacion
+        categoria = votacion.categoria
+        if not (votacion.publicada and categoria.activa and categoria.edicion.activa):
+            _rechazo(request, usuario, votacion, "no_habilitada")
+            raise VotoRechazado("no_habilitada", "Esta categoría no está habilitada para votar.")
         if votacion.estado == Votacion.Estado.CERRADA:
             _rechazo(request, usuario, votacion, "cerrada")
             raise VotoRechazado("cerrada", "Esta votación ya cerró. No se reciben más votos.")
@@ -59,22 +74,30 @@ def emitir_voto(usuario, opcion_id, request=None):
             _rechazo(request, usuario, votacion, "conflicto_jurado")
             raise VotoRechazado("conflicto_jurado", "Eres jurado de esta votación, así que no puedes votar como público (RN-15).")
 
-        clave = clave_frecuencia(votacion)
-        try:
-            # savepoint propio: si falla la restricción única, la transacción sigue usable
-            with transaction.atomic():
-                voto = Voto.objects.create(
-                    usuario=usuario, votacion=votacion, opcion=opcion,
-                    clave_frecuencia=clave, ip=ip_de(request),
-                )
-        except IntegrityError:
-            _rechazo(request, usuario, votacion, "limite")
-            if votacion.frecuencia == Votacion.Frecuencia.DIARIA:
-                raise VotoRechazado("limite", "Ya votaste hoy en esta votación. Puedes volver a votar mañana.")
-            raise VotoRechazado("limite", "Ya votaste en esta votación. Tu voto anterior sigue contando.")
+        anterior = voto_en_categoria(usuario, categoria)
+        if anterior is not None:
+            _rechazo(request, usuario, votacion, "ya_voto_categoria")
+            raise VotoRechazado("limite", _mensaje_duplicado(categoria, anterior))
 
-    registrar(request, "voto_emitido", f"{votacion.nombre} · comprobante {voto.codigo}", usuario=usuario)
+        try:
+            # savepoint propio: si dos solicitudes llegan al tiempo, MySQL rechaza la segunda
+            # por la restricción única y la transacción sigue usable
+            with transaction.atomic():
+                voto = Voto.objects.create(usuario=usuario, opcion=opcion, votacion=votacion,
+                                           categoria=categoria, edicion=categoria.edicion, ip=ip_de(request))
+        except IntegrityError:
+            _rechazo(request, usuario, votacion, "duplicado_simultaneo")
+            raise VotoRechazado("limite", _mensaje_duplicado(categoria, voto_en_categoria(usuario, categoria)))
+
+    registrar(request, "voto_emitido", f"{categoria.nombre} · {votacion.nombre} · comprobante {voto.codigo}", usuario=usuario)
     return voto
+
+
+def _mensaje_duplicado(categoria, anterior):
+    texto = f"Ya votaste en la categoría {categoria.nombre} de esta edición"
+    if anterior is not None:
+        texto += f" (en «{anterior.votacion.nombre}», por {anterior.opcion.nombre})"
+    return texto + ". Solo se permite un voto por categoría; puedes votar en otras categorías."
 
 
 def _rechazo(request, usuario, votacion, motivo):

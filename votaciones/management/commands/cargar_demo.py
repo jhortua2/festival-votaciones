@@ -72,37 +72,43 @@ class Command(BaseCommand):
         musica = Categoria.objects.create(edicion=ed, nombre="Música", descripcion="Canciones y presentaciones en tarima", orden=1, icono="acordeon", color="#F4B400")
         pilon = Categoria.objects.create(edicion=ed, nombre="Piloneras", descripcion="Grupos del desfile de apertura", orden=2, icono="pollera", color="#E23D32")
         publico = Categoria.objects.create(edicion=ed, nombre="Reconocimientos del público", descripcion="Vestuario, ambiente y otros", orden=3, icono="sombrero", color="#35B2A1")
+        rey = Categoria.objects.create(edicion=ed, nombre="Rey Vallenato", descripcion="Concurso de acordeoneros profesionales", orden=4, icono="acordeon", color="#E23D32")
 
-        V, F, M = Votacion.Visibilidad, Votacion.Frecuencia, Votacion.Modo
+        V, M = Votacion.Visibilidad, Votacion.Modo
         cancion = self._votacion(musica, "Mejor canción inédita", "Escoge la canción inédita que más te llegó al corazón. Ejemplo del modo combinado: jurado 70 % + público 30 % (propuesta del equipo, pendiente de validación).",
-                                 ahora - dia, ahora + 3 * dia, F.UNA_VEZ, V.SOLO_ADMIN, [
+                                 ahora - dia, ahora + 3 * dia, V.SOLO_ADMIN, [
                                      ("Brisa del Guatapurí", "Paseo", "#F4B400"), ("Pilón de mi tierra", "Merengue", "#E23D32"),
                                      ("Sabana de sol", "Son", "#35B2A1"), ("Puya pa' la plaza", "Puya", "#7A5CFF")])
-        aire = self._votacion(musica, "Tu aire favorito", "¿Cuál de los cuatro aires te pone a bailar? Puedes votar una vez al día. Es solo del público.",
-                              ahora - 2 * dia, ahora + 4 * dia, F.DIARIA, V.TIEMPO_REAL, [
+        aire = self._votacion(musica, "Tu aire favorito", "¿Cuál de los cuatro aires te pone a bailar? Es solo del público. Recuerda: en la categoría Música eliges una sola votación.",
+                              ahora - 2 * dia, ahora + 4 * dia, V.TIEMPO_REAL, [
                                   ("Paseo", "Aire", "#F4B400"), ("Merengue", "Aire", "#E23D32"), ("Son", "Aire", "#35B2A1"), ("Puya", "Aire", "#7A5CFF")])
         self._votacion(musica, "Mejor presentación en tarima", "Se abrirá durante las rondas finales.",
-                       ahora + 5 * dia, ahora + 8 * dia, F.UNA_VEZ, V.AL_CIERRE, [
+                       ahora + 5 * dia, ahora + 8 * dia, V.AL_CIERRE, [
                            ("Conjunto inscrito #03", "Tarima Francisco el Hombre", "#F4B400"), ("Conjunto inscrito #11", "Tarima Francisco el Hombre", "#E23D32"),
                            ("Conjunto inscrito #24", "Tarima Francisco el Hombre", "#35B2A1")])
         piloneras = self._votacion(pilon, "Grupo de piloneras favorito", "Votación de ejemplo ya cerrada en modo independiente: el jurado da el fallo oficial y el público un reconocimiento aparte.",
-                                   ahora - 10 * dia, ahora - 2 * dia, F.UNA_VEZ, V.AL_CIERRE, [
+                                   ahora - 10 * dia, ahora - 2 * dia, V.AL_CIERRE, [
                                        ("Grupo Mayores A", "Categoría mayores", "#E23D32"), ("Grupo Juvenil B", "Categoría juvenil", "#F4B400"),
                                        ("Grupo Infantil C", "Categoría infantil", "#35B2A1")])
-        borrador = Votacion.objects.create(categoria=publico, nombre="Vestuario más colorido", descripcion="Borrador: falta agregar opciones.",
-                                           apertura=ahora + 6 * dia, cierre=ahora + 9 * dia, modo=M.PUBLICO)
+        self._votacion(rey, "Tu Rey Vallenato favorito", "Escoge al acordeonero que más te gustó en la tarima.",
+                       ahora - dia, ahora + 5 * dia, V.AL_CIERRE, [
+                           ("Acordeonero inscrito #05", "Paseo", "#F4B400"), ("Acordeonero inscrito #12", "Merengue", "#E23D32"),
+                           ("Acordeonero inscrito #18", "Son", "#35B2A1")])
+        # Categoría todavía no habilitada para votar: su votación abre más adelante (CP-05)
+        vestuario = self._votacion(publico, "Vestuario más colorido", "Se habilita durante el desfile de piloneras.",
+                                   ahora + 6 * dia, ahora + 9 * dia, V.AL_CIERRE, [
+                                       ("Comparsa Las Marías", "Desfile", "#35B2A1"), ("Comparsa El Cardonal", "Desfile", "#F4B400")])
 
         # Modo de resultado (RN-11 / P-06, pendiente de validación): se muestran los dos escenarios.
         # Combinado (propuesta 70/30): canción inédita. Independiente: piloneras y tarima. Solo público: aire.
         Votacion.objects.filter(pk=cancion.pk).update(modo=M.COMBINADO, peso_jurado=70)
-        Votacion.objects.filter(pk=aire.pk).update(modo=M.PUBLICO)
+        Votacion.objects.filter(pk__in=[aire.pk, vestuario.pk]).update(modo=M.PUBLICO)
         for v in Votacion.objects.exclude(modo=M.PUBLICO):
             v.jurados.set(jurados)
 
-        Opcion.objects.create(votacion=borrador, nombre="Comparsa de ejemplo", detalle="Desfile", color="#35B2A1")
-
-        # Votos de ejemplo: solo los del votante de prueba en la votación ya cerrada, para que haya
-        # algo que consultar en el histórico. Las votaciones abiertas quedan libres para votar en la demo.
+        # Voto de ejemplo: el votante de prueba ya votó en Piloneras (votación cerrada), para que haya
+        # historial. Música y Rey Vallenato quedan libres para demostrar el voto válido, el duplicado
+        # y el voto en otra categoría (Entrega 3).
         self._votar(piloneras, ana, 1, piloneras.cierre - dia)
 
         # Calificación del jurado en la votación cerrada (bypass del servicio solo para sembrar datos).
@@ -112,16 +118,16 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"Datos de ejemplo cargados: {Edicion.objects.count()} edición, {Categoria.objects.count()} categorías, {Votacion.objects.count()} votaciones, {Voto.objects.count()} voto(s), {Usuario.objects.count()} usuarios y {Calificacion.objects.count()} calificaciones."))
         self._credenciales()
 
-    def _votacion(self, cat, nombre, desc, apertura, cierre, frecuencia, visibilidad, opciones):
+    def _votacion(self, cat, nombre, desc, apertura, cierre, visibilidad, opciones):
         v = Votacion.objects.create(categoria=cat, nombre=nombre, descripcion=desc, apertura=apertura, cierre=cierre,
-                                    frecuencia=frecuencia, visibilidad=visibilidad, publicada=True)
+                                    visibilidad=visibilidad, publicada=True)
         for i, (n, d, c) in enumerate(opciones, start=1):
             Opcion.objects.create(votacion=v, nombre=n, detalle=d, color=c, orden=i)
         return v
 
     def _votar(self, votacion, usuario, indice, momento):
         opcion = list(votacion.opciones.order_by("orden"))[indice]
-        Voto.objects.create(usuario=usuario, votacion=votacion, opcion=opcion, clave_frecuencia="unica", fecha=momento)
+        Voto.objects.create(usuario=usuario, opcion=opcion, fecha=momento)
 
     def _calificar(self, votacion, jurados, tablas, momento):
         opciones = list(votacion.opciones.order_by("orden"))

@@ -2,7 +2,11 @@
 
 Cada clase corresponde a una entidad del modelo conceptual de la Entrega 1.
 Las reglas de negocio que dependen del cliente se dejan como opciones
-configurables por votación (frecuencia, visibilidad, peso del jurado), no fijas en el código.
+configurables por votación (visibilidad, peso del jurado), no fijas en el código.
+
+Entrega 3 · regla del cliente: cada usuario elige una sola opción por categoría y
+edición. Puede votar en otras categorías, pero no dos veces en la misma, aunque la
+categoría tenga varias votaciones (subeventos). Ver el modelo Voto.
 
 Resultado de una votación (RN-11): todavía no está definido si el voto del público
 es independiente del jurado o se combina con él (P-06). Por eso cada votación tiene
@@ -76,11 +80,6 @@ class Categoria(models.Model):
 
 
 class Votacion(models.Model):
-    class Frecuencia(models.TextChoices):
-        # RN-06: pendiente de validación. Se deja configurable por votación.
-        UNA_VEZ = "una_vez", "Un voto por persona en toda la votación"
-        DIARIA = "diaria", "Un voto por persona por día"
-
     class Visibilidad(models.TextChoices):
         # RN-10: pendiente de validación. Se deja configurable por votación.
         SOLO_ADMIN = "solo_admin", "Solo administradores"
@@ -105,7 +104,6 @@ class Votacion(models.Model):
     descripcion = models.TextField("descripción", blank=True)
     apertura = models.DateTimeField()
     cierre = models.DateTimeField()
-    frecuencia = models.CharField(max_length=12, choices=Frecuencia.choices, default=Frecuencia.UNA_VEZ)
     visibilidad = models.CharField(max_length=12, choices=Visibilidad.choices, default=Visibilidad.SOLO_ADMIN)
     # RN-11: cómo se define el resultado. Pendiente de validación (P-06).
     modo = models.CharField(
@@ -305,16 +303,18 @@ def generar_codigo():
 class Voto(models.Model):
     """Un voto emitido. No se modifica ni se borra desde la aplicación (RN-05, RNF-02).
 
-    `votacion` se guarda aunque se pueda deducir de la opción, para que la base de
-    datos haga cumplir la regla de frecuencia con una restricción única:
-    (usuario, votacion, clave_frecuencia). Si la votación es de un voto en total,
-    la clave es "unica"; si es diaria, la clave es la fecha (AAAA-MM-DD).
+    Regla del cliente (Entrega 3, RN-06): un voto por usuario, categoría y edición.
+    `categoria` y `edicion` se guardan en el voto (se copian de la votación) para que
+    MySQL haga cumplir la regla con la restricción única
+    `un_voto_por_usuario_categoria_edicion`. Así, aunque lleguen dos solicitudes al
+    mismo tiempo, la base de datos solo acepta la primera (CP-09).
     """
 
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="votos")
-    votacion = models.ForeignKey(Votacion, on_delete=models.PROTECT, related_name="votos")
-    opcion = models.ForeignKey(Opcion, on_delete=models.PROTECT, related_name="votos")
-    clave_frecuencia = models.CharField(max_length=10)
+    edicion = models.ForeignKey(Edicion, on_delete=models.PROTECT, related_name="votos", verbose_name="edición")
+    categoria = models.ForeignKey(Categoria, on_delete=models.PROTECT, related_name="votos", verbose_name="categoría")
+    votacion = models.ForeignKey(Votacion, on_delete=models.PROTECT, related_name="votos", verbose_name="votación")
+    opcion = models.ForeignKey(Opcion, on_delete=models.PROTECT, related_name="votos", verbose_name="opción")
     codigo = models.CharField("código de comprobante", max_length=20, unique=True, default=generar_codigo)
     fecha = models.DateTimeField(default=timezone.now)
     ip = models.GenericIPAddressField(null=True, blank=True)
@@ -324,10 +324,18 @@ class Voto(models.Model):
         verbose_name = "voto"
         verbose_name_plural = "votos"
         constraints = [
+            # Control de duplicados en la base de datos (Entrega 3 · CP-02 y CP-09)
             models.UniqueConstraint(
-                fields=["usuario", "votacion", "clave_frecuencia"], name="un_voto_segun_frecuencia",
+                fields=["usuario", "categoria", "edicion"], name="un_voto_por_usuario_categoria_edicion",
             ),
         ]
+
+    def save(self, *args, **kwargs):
+        # La categoría y la edición siempre salen de la votación: no se pueden mezclar.
+        self.votacion = self.opcion.votacion
+        self.categoria = self.votacion.categoria
+        self.edicion = self.categoria.edicion
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.codigo} · {self.opcion}"

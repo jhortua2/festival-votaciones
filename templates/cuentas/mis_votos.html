@@ -1,12 +1,45 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load festival %}
 {% block titulo %}Mis votos{% endblock %}
 {% block contenido %}
 <div class="container-lg py-4 d-flex flex-column gap-3">
-  <div><span class="eyebrow">Tu historial</span><h1 class="h-display m-0" style="font-size:2rem">Mis votos</h1></div>
+  <div><span class="eyebrow">Tu participación</span><h1 class="h-display m-0" style="font-size:2rem">Mis votos</h1>
+    <p class="text-secondary m-0">Puedes elegir una sola opción por categoría en cada edición {% regla "RN-06" %}</p></div>
+
+  {% if edicion %}
+  <section class="panel-caja d-flex flex-column gap-2">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <h2 class="h5 fw-bold m-0">Categorías de {{ edicion.nombre }}</h2>
+      <span class="pill pill-abierta">Votaste en {{ n_votadas }} de {{ n_categorias }}</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle m-0">
+        <thead><tr><th>Categoría</th><th>Estado</th><th>Votación</th><th>Tu opción</th><th>Comprobante</th></tr></thead>
+        <tbody>
+        {% for f in filas %}
+          <tr>
+            <td class="fw-semibold">{{ f.categoria.nombre }}</td>
+            {% if f.voto %}
+              <td><span class="pill pill-abierta">Votada</span></td>
+              <td>{{ f.voto.votacion.nombre }}</td>
+              <td>{{ f.voto.opcion.nombre }}</td>
+              <td><a href="{% url 'votaciones:comprobante' f.voto.codigo %}"><code style="color:var(--sol)">{{ f.voto.codigo }}</code></a></td>
+            {% else %}
+              <td><span class="pill pill-cerrada">Pendiente</span></td>
+              <td colspan="3"><a href="{% url 'votaciones:categoria' f.categoria.pk %}">Ver votaciones de esta categoría →</a></td>
+            {% endif %}
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
+  <h2 class="h5 fw-bold m-0 mt-2">Historial de votos</h2>
   {% for v in votos %}
     <div class="vrow" style="cursor:default">
       <h3>{{ v.opcion.nombre }}</h3><code style="color:var(--sol)">{{ v.codigo }}</code>
-      <span class="meta"><span>{{ v.votacion.nombre }}</span><span>{{ v.votacion.categoria.nombre }}</span><span>{{ v.fecha|date:"j M Y · g:i a" }}</span></span>
+      <span class="meta"><span>{{ v.categoria.nombre }}</span><span>{{ v.votacion.nombre }}</span><span>{{ v.edicion.anio|stringformat:"d" }}</span><span>{{ v.fecha|date:"j M Y · g:i a" }}</span></span>
     </div>
   {% empty %}
     <div class="ejemplo">Todavía no has votado. <a href="{% url 'votaciones:categorias' %}">Ver votaciones</a></div>

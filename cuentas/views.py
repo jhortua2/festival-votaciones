@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 
 from auditoria.servicios import registrar
-from votaciones.models import Voto
+from votaciones.models import Categoria, Edicion, Voto
 
 from .forms import IngresoForm, RegistroForm
 
@@ -46,5 +46,21 @@ class Ingreso(auth_views.LoginView):
 
 @login_required
 def mis_votos(request):
-    votos = Voto.objects.filter(usuario=request.user).select_related("opcion", "votacion__categoria")
-    return render(request, "cuentas/mis_votos.html", {"votos": votos})
+    """Participación del votante (Entrega 3 · CP-07): categorías votadas y pendientes de la edición activa."""
+    votos = Voto.objects.filter(usuario=request.user).select_related("opcion", "votacion", "categoria", "edicion")
+    edicion = Edicion.actual()
+    votadas = {v.categoria_id: v for v in votos if edicion and v.edicion_id == edicion.pk}
+    filas = []
+    if edicion:
+        for c in Categoria.objects.filter(edicion=edicion, activa=True).order_by("orden", "nombre"):
+            filas.append({"categoria": c, "voto": votadas.get(c.pk)})
+    return render(request, "cuentas/mis_votos.html", {
+        "votos": votos, "edicion": edicion, "filas": filas,
+        "n_votadas": len(votadas), "n_categorias": len(filas),
+    })
+
+
+def csrf_fallo(request, reason=""):
+    """Formulario sin token CSRF válido (falta, expiró o viene de otro sitio): no se procesa nada."""
+    registrar(request, "csrf_rechazado", f"{request.method} {request.path} · {reason}"[:250])
+    return render(request, "403_csrf.html", {"motivo": reason}, status=403)

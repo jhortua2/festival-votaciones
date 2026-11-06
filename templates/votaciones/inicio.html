@@ -40,7 +40,7 @@
       <span class="eyebrow">{{ destacada.categoria.nombre }} · Votación abierta</span>
       <h3 class="m-0">{{ destacada.nombre }}</h3>
       <div class="cuenta" aria-label="Tiempo para el cierre"><div><b>{{ r.dias|stringformat:"02d" }}</b><small>días</small></div><div><b>{{ r.horas|stringformat:"02d" }}</b><small>horas</small></div><div><b>{{ r.minutos|stringformat:"02d" }}</b><small>min</small></div></div>
-      <div class="d-flex flex-wrap gap-3 small fw-semibold"><span>{{ destacada.opciones_activas.count }} opciones</span><span>{{ destacada.get_frecuencia_display }}</span></div>
+      <div class="d-flex flex-wrap gap-3 small fw-semibold"><span>{{ destacada.opciones_activas.count }} opciones</span><span>Un voto por categoría</span></div>
       <a class="btn align-self-start" href="{% url 'votaciones:detalle' destacada.pk %}">Votar ahora →</a>
     </div>
     {% if abiertas|length > 1 %}<p class="nota m-0">Hay {{ abiertas|length }} votaciones abiertas. <a href="{% url 'votaciones:categorias' %}">Verlas todas</a></p>{% endif %}

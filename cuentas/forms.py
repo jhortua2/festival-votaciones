@@ -1,8 +1,10 @@
 from django import forms
+from django.conf import settings
 from django.contrib.auth import password_validation
 from django.contrib.auth.forms import AuthenticationForm
 from django.utils import timezone
 
+from . import intentos
 from .models import Usuario
 
 
@@ -82,8 +84,21 @@ class IngresoForm(AuthenticationForm):
         _estilo(self)
 
     def clean(self):
-        correo = self.cleaned_data.get("username")
+        correo = (self.cleaned_data.get("username") or "").lower()
+        if correo and intentos.bloqueado(correo):
+            raise forms.ValidationError(
+                f"Demasiados intentos fallidos. Por seguridad, espera {settings.LOGIN_BLOQUEO_MINUTOS} minutos e inténtalo de nuevo.",
+                code="bloqueado",
+            )
         if correo:
             u = Usuario.objects.filter(email__iexact=correo).first()
             self.cleaned_data["username"] = u.username if u else correo
-        return super().clean()
+        try:
+            datos = super().clean()
+        except forms.ValidationError:
+            if correo:
+                intentos.fallo(correo)
+            raise
+        if correo:
+            intentos.limpiar(correo)
+        return datos

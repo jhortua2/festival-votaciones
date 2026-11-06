@@ -61,7 +61,7 @@ class EdicionForm(_Estilo, forms.ModelForm):
 class VotacionForm(_Estilo, forms.ModelForm):
     class Meta:
         model = Votacion
-        fields = ["categoria", "nombre", "descripcion", "apertura", "cierre", "frecuencia", "visibilidad",
+        fields = ["categoria", "nombre", "descripcion", "apertura", "cierre", "visibilidad",
                   "modo", "peso_jurado", "escala_maxima", "jurados"]
         widgets = {
             "peso_jurado": forms.NumberInput(attrs={"min": 1, "max": 99, "step": 5}),
@@ -72,7 +72,6 @@ class VotacionForm(_Estilo, forms.ModelForm):
             "descripcion": forms.Textarea(attrs={"rows": 3}),
         }
         help_texts = {
-            "frecuencia": "Pendiente de validación con el cliente (RN-06 / P-03).",
             "visibilidad": "Pendiente de validación con el cliente (RN-10 / P-05).",
             "modo": "Pendiente de validación (RN-11 / P-06): la Fundación debe decidir si el voto del público se combina con el jurado o va aparte.",
             "peso_jurado": "Solo se usa en modo combinado. Propuesta del equipo: 70 (jurado 70 % + público 30 %), pendiente de validación (P-06).",
@@ -87,7 +86,7 @@ class VotacionForm(_Estilo, forms.ModelForm):
             self.fields[f].input_formats = ["%Y-%m-%dT%H:%M"]
         if self.instance.pk and (self.instance.votos.exists() or self.instance.calificaciones.exists()):
             # Con votos o calificaciones no se cambian las reglas del juego
-            for f in ("frecuencia", "categoria", "apertura", "modo", "peso_jurado", "escala_maxima"):
+            for f in ("categoria", "apertura", "modo", "peso_jurado", "escala_maxima"):
                 self.fields[f].disabled = True
 
 

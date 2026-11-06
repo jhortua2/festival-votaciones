@@ -1,6 +1,5 @@
 """Pruebas de las reglas de negocio del voto. Ejecutar:  python manage.py test"""
 from datetime import timedelta
-from unittest import mock
 
 from django.db import IntegrityError, transaction
 from django.test import TestCase
@@ -36,25 +35,12 @@ class ReglasDelVoto(Base):
         self.assertTrue(voto.codigo.startswith("VLL-"))
         self.assertEqual(Voto.objects.count(), 1)
 
-    def test_un_voto_por_votacion(self):  # RN-06 (valor propuesto)
+    def test_un_voto_por_votacion(self):  # RN-06: un voto por categoría (incluye la misma votación)
         emitir_voto(self.ana, self.a.pk)
         with self.assertRaises(VotoRechazado) as e:
             emitir_voto(self.ana, self.b.pk)
         self.assertEqual(e.exception.motivo, "limite")
         self.assertEqual(Voto.objects.count(), 1)
-
-    def test_frecuencia_diaria(self):  # RN-06 alternativa configurable
-        self.v.frecuencia = Votacion.Frecuencia.DIARIA
-        self.v.save()
-        emitir_voto(self.ana, self.a.pk)
-        with self.assertRaises(VotoRechazado):
-            emitir_voto(self.ana, self.a.pk)
-        manana = timezone.now() + timedelta(hours=25)
-        self.v.cierre = manana + timedelta(days=1)
-        self.v.save()
-        with mock.patch("django.utils.timezone.now", return_value=manana):
-            emitir_voto(self.ana, self.a.pk)
-        self.assertEqual(Voto.objects.count(), 2)
 
     def test_votacion_cerrada(self):  # RN-02
         v = self.crear_votacion(nombre="Vieja", apertura=self.ahora - timedelta(days=3), cierre=self.ahora - timedelta(days=1))
@@ -87,9 +73,9 @@ class ReglasDelVoto(Base):
         self.assertEqual(e.exception.motivo, "opcion_inactiva")
 
     def test_la_base_de_datos_impide_duplicados(self):  # RNF-02: no depende solo de la interfaz
-        Voto.objects.create(usuario=self.ana, votacion=self.v, opcion=self.a, clave_frecuencia="unica")
+        Voto.objects.create(usuario=self.ana, opcion=self.a)
         with self.assertRaises(IntegrityError), transaction.atomic():
-            Voto.objects.create(usuario=self.ana, votacion=self.v, opcion=self.b, clave_frecuencia="unica")
+            Voto.objects.create(usuario=self.ana, opcion=self.b)
 
     def test_publicar_requiere_dos_opciones(self):  # RN-07
         v = self.crear_votacion(nombre="Nueva", publicada=False)

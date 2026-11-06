@@ -1,0 +1,34 @@
+{% extends "panel/base_panel.html" %}{% load festival %}
+{% block titulo %}Votos registrados{% endblock %}
+{% block panel %}
+<div><span class="eyebrow">{{ edicion.nombre }} · Entrega 3</span><h1 class="h3 fw-bold m-0">Votos registrados</h1>
+  <p class="text-secondary m-0">Consulta de los votos guardados en MySQL (tabla <code>votaciones_voto</code>). Un voto por usuario, categoría y edición {% regla "RN-06" %}. Los votos no se pueden editar ni borrar (RN-05).</p></div>
+
+<div class="row g-2">
+  {% for c in por_categoria %}
+  <div class="col-6 col-md-3"><div class="panel-caja h-100"><span class="nota">{{ c.categoria__nombre }}</span><div class="fs-4 fw-bold">{{ c.n }}</div><span class="nota">{{ c.votantes }} votante{{ c.votantes|pluralize }}</span></div></div>
+  {% empty %}<div class="col-12"><div class="panel-caja text-secondary">Todavía no hay votos en esta edición.</div></div>{% endfor %}
+</div>
+
+<form method="get" class="panel-caja d-flex flex-wrap gap-2 align-items-end">
+  <div><label class="form-label small" for="f-cat">Categoría</label>
+    <select id="f-cat" name="categoria" class="form-select form-select-sm"><option value="">Todas</option>
+      {% for c in categorias %}<option value="{{ c.pk }}" {% if f_cat == c.pk|stringformat:"d" %}selected{% endif %}>{{ c.nombre }}</option>{% endfor %}</select></div>
+  <div><label class="form-label small" for="f-vot">Votación</label>
+    <select id="f-vot" name="votacion" class="form-select form-select-sm"><option value="">Todas</option>
+      {% for v in votaciones %}<option value="{{ v.pk }}" {% if f_vot == v.pk|stringformat:"d" %}selected{% endif %}>{{ v.categoria.nombre }} · {{ v.nombre }}</option>{% endfor %}</select></div>
+  <div><label class="form-label small" for="f-q">Código o correo</label>
+    <input id="f-q" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="VLL-… o correo"></div>
+  <button class="btn btn-sol btn-sm" type="submit">Filtrar</button>
+  {% if f_cat or f_vot or q %}<a class="btn btn-linea btn-sm" href="{% url 'panel:votos' %}">Quitar filtros</a>{% endif %}
+</form>
+
+<p class="m-0"><b>{{ total }} voto{{ total|pluralize }}</b>{% if f_cat or f_vot or q %} con los filtros aplicados{% endif %}.</p>
+<div class="tabla-caja table-responsive"><table class="table tabla">
+  <thead><tr><th>Comprobante</th><th>Usuario</th><th>Categoría</th><th>Votación</th><th>Opción</th><th>Fecha</th></tr></thead>
+  <tbody>{% for v in votos %}
+    <tr><td><code>{{ v.codigo }}</code></td><td>{{ v.usuario.email }}</td><td>{{ v.categoria.nombre }}</td><td>{{ v.votacion.nombre }}</td><td>{{ v.opcion.nombre }}</td><td class="text-nowrap">{{ v.fecha|date:"Y-m-d H:i" }}</td></tr>
+  {% empty %}<tr><td colspan="6" class="text-secondary">No hay votos con esos filtros.</td></tr>{% endfor %}</tbody>
+</table></div>
+<p class="nota m-0">Para comprobarlo en MySQL: <code>SELECT codigo, usuario_id, categoria_id, votacion_id, opcion_id, fecha FROM votaciones_voto;</code></p>
+{% endblock %}

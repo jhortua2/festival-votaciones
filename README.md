@@ -8,6 +8,10 @@ Proyecto de la asignatura **Desarrollo Web** (Fundación Universitaria del Área
 >
 > **Reglas: enunciado vs. propuesta.** Cada regla aparece en las pantallas con su origen: **Enunciado** (la pidió el cliente en el enunciado) o **Propuesta** (la sugirió el equipo y sigue pendiente de validación con la Fundación). La lista está en [`votaciones/reglas.py`](votaciones/reglas.py).
 >
+> **Regla de votación (Entrega 3).** Cada usuario elige **una sola opción por categoría y edición**. Puede votar en otras categorías, pero no dos veces en la misma, aunque la categoría tenga varias votaciones (subeventos). La regla se valida en Django y la garantiza MySQL con una restricción única.
+>
+> **Administración desde la app.** Todo se gestiona desde el panel propio (`/panel/`): ediciones, categorías, votaciones, opciones, jurados, votos registrados, resultados y auditoría, con formularios para crear, editar, activar/inactivar y eliminar. Django Admin queda solo como herramienta técnica de respaldo.
+>
 > **Voto del público y jurado.** La Fundación todavía no decide si el voto del público es **independiente** del fallo del jurado o se **combina** con él (pregunta P-06). Por eso cada votación tiene un *modo de resultado* configurable. El 70 % jurado / 30 % público del modo combinado es solo una **propuesta del equipo**, no una decisión oficial.
 
 ---
@@ -67,11 +71,13 @@ py manage.py cargar_demo
 `migrate` crea todas las tablas en MySQL. `cargar_demo` carga:
 
 - **1 edición**: 2027 (número 60, la activa). Las demás ediciones se registran desde Django Admin o el panel;
-- 3 categorías y 5 votaciones (abiertas, próxima, cerrada y un borrador), con sus opciones;
-- tres usuarios de prueba, uno por rol (administrador, jurado y votante), con un voto y las calificaciones del jurado en la votación cerrada;
+- 4 categorías y 6 votaciones: **Música** (dos votaciones abiertas y una próxima), **Rey Vallenato** (abierta), **Piloneras** (cerrada) y **Reconocimientos del público** (todavía no abre), con sus opciones;
+- tres usuarios de prueba, uno por rol (administrador, jurado y votante). El votante ya votó en Piloneras; Música y Rey Vallenato quedan libres para probar la regla de un voto por categoría;
 - los dos modos de resultado: **combinado** en «Mejor canción inédita» e **independiente** en «Grupo de piloneras favorito».
 
 Para volver a empezar desde cero: `py manage.py cargar_demo --reiniciar`
+
+> **¿Ya tenía el proyecto de la Entrega 2?** Después de `git pull`, corra `py manage.py migrate`: la migración `0004_voto_por_categoria` agrega la categoría y la edición al voto, crea la restricción única y quita la frecuencia de voto. Si había votos repetidos en una misma categoría, conserva el primero. Luego `py manage.py cargar_demo --reiniciar` deja los datos de prueba nuevos.
 
 ## 5. Arrancar el servidor
 
@@ -87,7 +93,9 @@ Para apagar: `Ctrl + C`.
 | Ediciones del Festival | http://localhost:8888/ediciones/ |
 | Panel de la Fundación | http://localhost:8888/panel/ |
 | Panel del jurado | http://localhost:8888/jurado/ |
-| Django Admin | http://localhost:8888/django-admin/ |
+| Votos registrados (panel) | http://localhost:8888/panel/votos/ |
+| **API GET de categorías (JSON)** | http://localhost:8888/api/categorias/ |
+| Django Admin (respaldo técnico) | http://localhost:8888/django-admin/ |
 
 ### Usuarios de prueba
 
@@ -99,17 +107,95 @@ Los crea `cargar_demo`. Son **datos de prueba** sin información real; no sirven
 | Votante | `votante@festival.test` | `Vallenato2027!` |
 | Jurado | `jurado@festival.test` | `Jurado2027!` |
 
-## 6. Pruebas automáticas
+## 6. Módulo de votaciones y API (Entrega 3)
+
+### Flujo del voto
+
+Iniciar sesión → elegir categoría → elegir votación → seleccionar una opción → confirmar → Django valida → MySQL guarda el voto.
+
+| Validación | Dónde se controla |
+|---|---|
+| Hay que iniciar sesión para votar | `@login_required` en `votaciones/views.py` (vista `confirmar`) y `servicios.emitir_voto` |
+| Formulario de Django enviado por POST con token CSRF | `votaciones/forms.py` (`VotoForm`), `templates/votaciones/confirmacion.html` y el middleware CSRF |
+| La opción pertenece a la votación (y a su categoría y edición) | `VotoForm` (solo acepta opciones de esa votación) y `servicios.emitir_voto(..., votacion=...)` |
+| La categoría está habilitada (votación publicada y abierta, categoría y edición activas) | `votaciones/servicios.py` (`emitir_voto`) |
+| **Un voto por usuario, categoría y edición** | Validación: `votaciones/servicios.py` (`voto_en_categoria` y `emitir_voto`). Base de datos: restricción única `un_voto_por_usuario_categoria_edicion` en `votaciones/models.py` (modelo `Voto`) y migración `votaciones/migrations/0004_voto_por_categoria.py` |
+| Dos solicitudes al mismo tiempo | La restricción única de MySQL rechaza la segunda; `emitir_voto` captura el `IntegrityError` y responde "Ya votaste en esta categoría" |
+
+### Participación y consulta administrativa
+
+- **Votante:** `/cuentas/mis-votos/` muestra las categorías votadas y las pendientes de la edición activa, con el comprobante de cada voto.
+- **Administrador:** Panel → **Votos registrados** (`/panel/votos/`), con totales por categoría y filtros por categoría, votación, código o correo. Los votos no se pueden editar ni borrar.
+
+### Administración desde el panel (sin Django Admin)
+
+| Qué | Crear | Editar | Activar / publicar / cerrar | Eliminar |
+|---|---|---|---|---|
+| Ediciones | ✅ | ✅ | Activar | Solo si no es la activa y no tiene categorías |
+| Categorías | ✅ | ✅ | Activar / inactivar | Solo si no tiene votaciones (si no, se inactiva) |
+| Votaciones | ✅ | ✅ | Publicar / cerrar | Solo si no tiene votos ni calificaciones (si no, se cierra) |
+| Opciones | ✅ | ✅ | Activar / inactivar | Solo si no tiene votos (RN-08) |
+
+Las eliminaciones van por POST con CSRF y piden confirmación; nunca se borra un voto (RN-05).
+
+### API GET
+
+`GET /api/categorias/` devuelve en JSON la edición activa con sus categorías, las votaciones publicadas y sus opciones activas, consultadas en MySQL. Con `?anio=2027` se consulta otra edición. Código: [`votaciones/api.py`](votaciones/api.py); ruta en [`votaciones/urls.py`](votaciones/urls.py).
+
+```json
+{
+  "edicion": {"id": 1, "anio": 2027, "numero": 60, "nombre": "Festival de la Leyenda Vallenata 2027", "activa": true},
+  "regla": "Un voto por usuario, categoría y edición.",
+  "total_categorias": 4,
+  "categorias": [
+    {"id": 1, "nombre": "Música", "descripcion": "Canciones y presentaciones en tarima", "orden": 1,
+     "votaciones": [
+       {"id": 1, "nombre": "Mejor canción inédita", "estado": "abierta", "apertura": "...", "cierre": "...",
+        "opciones": [{"id": 1, "nombre": "Brisa del Guatapurí", "detalle": "Paseo", "orden": 1}]}
+     ]}
+  ]
+}
+```
+
+La API corre en el servidor local (`localhost`); para verla, arranque el proyecto y abra la dirección en el navegador o en Postman.
+
+### Seguridad de formularios y de Django
+
+| Protección | Dónde |
+|---|---|
+| **Token CSRF** en los 21 formularios POST (`{% csrf_token %}`), generado y verificado por `CsrfViewMiddleware` y firmado con `DJANGO_SECRET_KEY` | `config/settings.py` (`MIDDLEWARE`) y cada plantilla con `<form method="post">` |
+| Página propia cuando falta o vence el token (403) y registro en la auditoría | `CSRF_FAILURE_VIEW = "cuentas.views.csrf_fallo"` y `templates/403_csrf.html` |
+| Cookies de sesión y CSRF con `HttpOnly` y `SameSite=Lax`; la sesión dura máximo 2 horas y se cierra al cerrar el navegador | `config/settings.py` |
+| Límite de intentos de inicio de sesión: 5 fallos seguidos bloquean ese correo 15 minutos | `cuentas/intentos.py` e `IngresoForm` en `cuentas/forms.py` |
+| Contraseñas con hash PBKDF2 y validadores de Django (mínimo 8 caracteres, no comunes, no solo números, distintas al nombre o correo) | `AUTH_PASSWORD_VALIDATORS` en `config/settings.py` |
+| Cabeceras: `X-Frame-Options: DENY` (clickjacking), `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin` | `config/settings.py` |
+| Formularios de Django que validan en el servidor (registro, ingreso, voto, panel) | `cuentas/forms.py`, `votaciones/forms.py`, `votaciones/forms_panel.py` |
+| Permisos por rol: el panel solo para administradores, el panel del jurado solo para jurados | `solo_admin` en `votaciones/views_panel.py` |
+| Sin secretos en el repositorio: claves en `.env` (no se sube); en producción (`DJANGO_DEBUG=0`) la clave secreta es obligatoria y se activan cookies seguras, HTTPS y HSTS | `.gitignore`, `.env.example` y `config/settings.py` |
+
+### Prueba de concurrencia
+
+```bash
+py manage.py probar_concurrencia            # 2 solicitudes simultáneas
+py manage.py probar_concurrencia --hilos 5  # 5 solicitudes simultáneas
+```
+
+Crea un usuario temporal, envía varios votos **al mismo tiempo** en la misma categoría (cada uno con su propia conexión a MySQL) y muestra que solo quedó uno. Al final borra el usuario temporal. Código: [`votaciones/concurrencia.py`](votaciones/concurrencia.py).
+
+## 7. Pruebas automáticas
 
 ```bash
 py manage.py test
 ```
 
-Son **47 pruebas**. Deben terminar en `OK`.
+Son **87 pruebas** (las de la Entrega 3 están en `votaciones/tests/test_entrega3.py`, una clase por caso CP-01 a CP-10, más la gestión desde el panel, y las de seguridad en `votaciones/tests/test_seguridad.py`). Deben terminar en `OK`. Las pruebas de hilos simultáneos reales (CP-09) solo corren con MySQL.
 
 | Grupo | Qué prueban |
 |---|---|
-| Voto del público | Un voto por persona, voto diario, votación cerrada, opción inactiva, restricción única en la base de datos |
+| **Entrega 3 (CP-01 a CP-10)** | Voto válido, segundo voto en la misma categoría (otra opción u otra votación), voto en otra categoría, sin sesión, sin CSRF, categoría no habilitada, opción de otra categoría, categorías votadas, consulta del administrador, solicitudes simultáneas y API GET |
+| Seguridad | Token CSRF en los formularios y página 403, límite de intentos de inicio de sesión, cabeceras de seguridad, cookies protegidas y contraseñas con hash |
+| Gestión desde el panel | Eliminar ediciones, categorías y votaciones con sus reglas, solo por POST y solo administradores |
+| Voto del público | Votación cerrada, próxima o en borrador, opción inactiva, restricción única en la base de datos |
 | Panel | Permisos, publicar solo con 2 opciones o más, exportación CSV |
 | Cuentas | Registro, validaciones e inicio de sesión |
 | Jurado | Calificar todas las opciones, no calificar dos veces, solo jurados asignados, escala, el jurado no vota como público |
@@ -119,15 +205,15 @@ Son **47 pruebas**. Deben terminar en `OK`.
 
 ### Evidencia reproducible en GitHub
 
-Cada vez que alguien sube un commit, GitHub corre las pruebas solo, contra un **MySQL 8 real** ([`.github/workflows/pruebas.yml`](.github/workflows/pruebas.yml)): instala las librerías, crea las tablas, carga los datos de prueba y corre las 47 pruebas. El resultado se ve en la pestaña **Actions** del repositorio y en la insignia de arriba de este README.
+Cada vez que alguien sube un commit, GitHub corre las pruebas solo, contra un **MySQL 8 real** ([`.github/workflows/pruebas.yml`](.github/workflows/pruebas.yml)): instala las librerías, crea las tablas, carga los datos de prueba y corre las 87 pruebas, incluidas las de solicitudes simultáneas. El resultado se ve en la pestaña **Actions** del repositorio y en la insignia de arriba de este README.
 
-## 7. Modo rápido sin MySQL (opcional)
+## 8. Modo rápido sin MySQL (opcional)
 
 En el archivo `.env` cambie `DB_ENGINE=mysql` por `DB_ENGINE=sqlite` y repita el paso 4. Los datos quedan en `db.sqlite3` (también ignorado por Git). **La entrega oficial usa MySQL.**
 
 ---
 
-## 8. Cómo está organizado (patrón MVT)
+## 9. Cómo está organizado (patrón MVT)
 
 ```
 festival-votaciones/
@@ -136,12 +222,15 @@ festival-votaciones/
 ├── votaciones/
 │   ├── models.py        Modelos: Edición → Categoría → Votación → Opción → Voto / Calificación
 │   ├── reglas.py        Origen de cada regla (enunciado o propuesta)
-│   ├── servicios.py     Reglas del voto y de la calificación (lógica de negocio)
+│   ├── servicios.py     Reglas del voto (un voto por categoría) y de la calificación
+│   ├── forms.py         Formulario del voto (VotoForm)
+│   ├── api.py           API GET /api/categorias/ (JSON)
+│   ├── concurrencia.py  Votos simultáneos para la prueba CP-09
 │   ├── views.py         Vistas públicas          urls.py
 │   ├── views_panel.py   Panel de la Fundación    urls_panel.py
 │   ├── views_jurado.py  Panel del jurado         urls_jurado.py
 │   ├── migrations/      Migraciones de la base de datos
-│   ├── management/commands/cargar_demo.py   Datos de prueba
+│   ├── management/commands/   cargar_demo.py (datos de prueba) y probar_concurrencia.py
 │   └── tests/           Pruebas automáticas
 ├── auditoria/           Bitácora de acciones
 ├── templates/           Plantillas HTML (la "T" de MVT)
@@ -163,7 +252,8 @@ festival-votaciones/
 | Comprobante / Mis votos | `/comprobante/<código>/` · `/cuentas/mis-votos/` |
 | Panel | `/panel/` |
 | Ediciones, categorías, votaciones y opciones | `/panel/ediciones/` · `/panel/categorias/` · `/panel/votaciones/` · `/panel/votaciones/<id>/opciones/` |
-| Jurados / Resultados / Auditoría | `/panel/jurados/` · `/panel/resultados/` · `/panel/auditoria/` |
+| Jurados / Votos registrados / Resultados / Auditoría | `/panel/jurados/` · `/panel/votos/` · `/panel/resultados/` · `/panel/auditoria/` |
+| API GET de categorías | `/api/categorias/` |
 | Panel del jurado / Calificar | `/jurado/` · `/jurado/votaciones/<id>/` |
 
 ### Reglas de negocio en el código
@@ -172,9 +262,9 @@ festival-votaciones/
 |---|---|---|
 | RN-01 Votación → Categoría → Edición | Enunciado | `ForeignKey` en `votaciones/models.py` |
 | RN-02 Solo se vota con la votación abierta | Propuesta | `Votacion.estado` (calculado con las fechas) y `servicios.emitir_voto` |
-| RN-04 Solo usuarios registrados votan | Propuesta | `@login_required` en la confirmación |
+| RN-04 Solo usuarios registrados votan | Enunciado (Entrega 3) | `@login_required` en la confirmación y `servicios.emitir_voto` |
 | RN-05 El voto no se modifica | Propuesta | No hay vista de edición; Django Admin lo bloquea |
-| RN-06 Frecuencia de voto | Propuesta | Campo `frecuencia` + restricción única `(usuario, votación, clave_frecuencia)` en MySQL |
+| RN-06 Un voto por usuario, categoría y edición | Enunciado (Entrega 3) | `servicios.emitir_voto` + restricción única `(usuario, categoria, edicion)` del modelo `Voto` en MySQL |
 | RN-07 Mínimo 2 opciones para publicar | Propuesta | `Votacion.puede_publicarse()` |
 | RN-08 Opción con votos no se elimina | Propuesta | `views_panel.opcion_eliminar`; se inactiva con justificación |
 | RN-10 Visibilidad de resultados | Propuesta | Campo `visibilidad` por votación |
@@ -185,7 +275,7 @@ festival-votaciones/
 
 Cuando la Fundación apruebe una regla, se cambia a `APROBADA` en `votaciones/reglas.py` y todas las pantallas lo muestran solas.
 
-## 9. Atención a las observaciones de la Entrega 1
+## 10. Atención a las observaciones de la Entrega 1
 
 | Observación del docente | Qué se hizo |
 |---|---|
@@ -195,7 +285,7 @@ Cuando la Fundación apruebe una regla, se cambia a `APROBADA` en `votaciones/re
 | Acceso al repositorio y evidencias reproducibles | Repositorio público, sin inicio de sesión; pasos de instalación, datos de prueba y pruebas automáticas en GitHub Actions con MySQL |
 | Interfaces que pedían credenciales | Prototipo y mockups publicados en un enlace abierto, sin inicio de sesión |
 
-## 10. Problemas comunes
+## 11. Problemas comunes
 
 | Error | Solución |
 |---|---|
@@ -204,9 +294,11 @@ Cuando la Fundación apruebe una regla, se cambia a `APROBADA` en `votaciones/re
 | `Can't connect to MySQL server` | El servicio MySQL80 está apagado: `Start-Service MySQL80` (PowerShell como administrador) |
 | `'py' no se reconoce` | Instale Python y abra una terminal nueva |
 | `No module named 'django'` | Falta activar el entorno virtual (paso 2) |
+| «Demasiados intentos fallidos» al iniciar sesión | Espere 15 minutos o reinicie el servidor (el contador está en memoria) |
+| `probar_concurrencia` dice `database is locked` | Está usando SQLite (modo rápido). La prueba de concurrencia es para MySQL |
 | Se ve sin estilos | Abra `http://localhost:8888`, no el archivo HTML directamente |
 
-## 11. Pendiente para las próximas entregas
+## 12. Pendiente para las próximas entregas
 
 - Confirmar con la Fundación las reglas marcadas como *Propuesta*, en especial el modo de resultado (P-06).
 - Recuperación de contraseña por correo (requiere un servidor SMTP).

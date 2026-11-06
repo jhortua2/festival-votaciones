@@ -27,7 +27,7 @@ class OpcionInline(admin.TabularInline):
 
 @admin.register(Votacion)
 class VotacionAdmin(admin.ModelAdmin):
-    list_display = ("nombre", "categoria", "apertura", "cierre", "publicada", "frecuencia", "visibilidad", "modo")
+    list_display = ("nombre", "categoria", "apertura", "cierre", "publicada", "visibilidad", "modo")
     filter_horizontal = ("jurados",)
     list_filter = ("categoria", "publicada")
     inlines = [OpcionInline]
@@ -35,8 +35,10 @@ class VotacionAdmin(admin.ModelAdmin):
 
 @admin.register(Voto)
 class VotoAdmin(admin.ModelAdmin):
-    list_display = ("codigo", "votacion", "opcion", "usuario", "fecha")
-    list_filter = ("votacion",)
+    list_display = ("codigo", "usuario", "edicion", "categoria", "votacion", "opcion", "fecha")
+    list_filter = ("edicion", "categoria", "votacion")
+    search_fields = ("codigo", "usuario__email", "opcion__nombre")
+    list_select_related = ("usuario", "edicion", "categoria", "votacion", "opcion")
 
     # RN-05 / RNF-02: los votos no se editan ni se borran
     def has_add_permission(self, request):

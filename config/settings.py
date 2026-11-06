@@ -28,6 +28,11 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "solo-para-desarrollo-cambie-es
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
+if not DEBUG and SECRET_KEY.startswith("solo-para-desarrollo"):
+    # En producción la clave secreta (con la que se firman las sesiones y el token CSRF) es obligatoria
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured("Defina DJANGO_SECRET_KEY en el archivo .env antes de usar DJANGO_DEBUG=0.")
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -134,3 +139,35 @@ MAX_IMAGEN_OPCION_MB = 2
 MESSAGE_TAGS = {
     40: "danger",  # messages.ERROR -> clase Bootstrap "alert-danger"
 }
+
+# ---------------------------------------------------------------------------
+# Seguridad de formularios, sesiones y cabeceras (Entrega 3)
+# ---------------------------------------------------------------------------
+# Token CSRF: lo genera CsrfViewMiddleware y va en cada formulario POST con {% csrf_token %}.
+CSRF_COOKIE_HTTPONLY = True           # JavaScript no puede leer la cookie del token
+CSRF_COOKIE_SAMESITE = "Lax"          # la cookie no viaja en peticiones desde otros sitios
+CSRF_FAILURE_VIEW = "cuentas.views.csrf_fallo"  # página propia cuando el token falta o no es válido
+
+# Sesión
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_AGE = 2 * 60 * 60      # la sesión dura máximo 2 horas
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# Cabeceras de seguridad
+X_FRAME_OPTIONS = "DENY"              # nadie puede meter la app en un <iframe> (clickjacking)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+
+# Intentos de inicio de sesión: después de 5 fallos seguidos con el mismo correo, se bloquea 15 minutos
+LOGIN_MAX_INTENTOS = int(os.environ.get("LOGIN_MAX_INTENTOS", "5"))
+LOGIN_BLOQUEO_MINUTOS = int(os.environ.get("LOGIN_BLOQUEO_MINUTOS", "15"))
+
+if not DEBUG:
+    # Solo con HTTPS (al desplegar): cookies seguras y HTTPS obligatorio
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = os.environ.get("DJANGO_SSL_REDIRECT", "1") == "1"
+    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o]

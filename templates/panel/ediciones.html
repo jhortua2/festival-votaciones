@@ -22,9 +22,10 @@
       <td><span class="pill {% if e.activa %}pill-abierta{% else %}pill-cerrada{% endif %}">{% if e.activa %}Activa{% else %}No activa{% endif %}</span></td>
       <td><div class="d-flex gap-1 flex-wrap">
         <a class="btn btn-linea btn-sm" href="{% url 'panel:edicion_editar' e.pk %}">Editar</a>
-        {% if not e.activa %}<form method="post" action="{% url 'panel:edicion_activar' e.pk %}">{% csrf_token %}<button class="btn btn-linea btn-sm">Activar</button></form>{% endif %}
+        {% if not e.activa %}<form method="post" action="{% url 'panel:edicion_activar' e.pk %}">{% csrf_token %}<button class="btn btn-linea btn-sm">Activar</button></form>
+        <form method="post" action="{% url 'panel:edicion_eliminar' e.pk %}" onsubmit="return confirm('¿Eliminar la edición {{ e.nombre|escapejs }}? Esta acción no se puede deshacer.');">{% csrf_token %}<button class="btn btn-pollera btn-sm">Eliminar</button></form>{% endif %}
       </div></td></tr>
   {% empty %}<tr><td colspan="6" class="text-secondary">Aún no hay ediciones.</td></tr>{% endfor %}</tbody>
 </table></div>
-<p class="nota m-0">Solo hay una edición activa: es la que ve el público en el inicio y la que se administra en Categorías y Votaciones. Las anteriores se siguen consultando en la página «Ediciones».</p>
+<p class="nota m-0">Solo hay una edición activa: es la que ve el público en el inicio y la que se administra en Categorías y Votaciones. Las anteriores se siguen consultando en la página «Ediciones». Solo se puede eliminar una edición que no esté activa y no tenga categorías.</p>
 {% endblock %}

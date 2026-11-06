@@ -15,6 +15,7 @@
     </div>
     <form method="post" class="d-grid gap-2 px-4 pb-4">
       {% csrf_token %}
+      {% if form.non_field_errors or form.confirmado.errors %}<div class="alert alert-danger m-0">{{ form.non_field_errors }}{{ form.confirmado.errors }}</div>{% endif %}
       <input type="hidden" name="opcion" value="{{ opcion.pk }}">
       <input type="hidden" name="confirmado" value="1">
       <button class="btn btn-sol btn-lg" type="submit">Sí, confirmar mi voto</button>

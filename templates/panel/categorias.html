@@ -25,8 +25,9 @@
           {% if request.session.confirmar_categoria == c.pk %}<input type="hidden" name="confirmar" value="1"><button class="btn btn-pollera btn-sm">Confirmar inactivación</button>
           {% else %}<button class="btn btn-linea btn-sm">{% if c.activa %}Inactivar{% else %}Activar{% endif %}</button>{% endif %}
         </form>
+        <form method="post" action="{% url 'panel:categoria_eliminar' c.pk %}" onsubmit="return confirm('¿Eliminar la categoría {{ c.nombre|escapejs }}? Esta acción no se puede deshacer.');">{% csrf_token %}<button class="btn btn-pollera btn-sm">Eliminar</button></form>
       </div></td></tr>
   {% empty %}<tr><td colspan="5" class="text-secondary">Aún no hay categorías.</td></tr>{% endfor %}</tbody>
 </table></div>
-<p class="nota m-0">El nombre no puede repetirse en la misma edición. Si la categoría tiene votaciones abiertas, se pide confirmar antes de inactivarla (CU-05, flujo 3a).</p>
+<p class="nota m-0">El nombre no puede repetirse en la misma edición. Si la categoría tiene votaciones abiertas, se pide confirmar antes de inactivarla (CU-05, flujo 3a). Solo se puede eliminar una categoría sin votaciones; si ya tiene, se inactiva.</p>
 {% endblock %}

@@ -12,7 +12,7 @@
   <h2 class="h5 fw-bold m-0 mt-2">Reglas de esta votación</h2>
   {% include "includes/leyenda_origen.html" %}
   <div class="row g-2">
-    <div class="col-md-6"><div class="regla"><span class="ic">1×</span><div><b>{{ votacion.get_frecuencia_display }}</b><span>Regla configurada por el administrador. {% regla "RN-06" %}</span></div></div></div>
+    <div class="col-md-6"><div class="regla"><span class="ic">1×</span><div><b>Un voto por categoría</b><span>Eliges una sola opción en la categoría {{ votacion.categoria.nombre }} de esta edición, aunque tenga varias votaciones. Puedes votar en otras categorías. {% regla "RN-06" %}</span></div></div></div>
     <div class="col-md-6"><div class="regla"><span class="ic">⏱</span><div><b>Abre {{ votacion.apertura|date:"j M Y · g:i a" }}</b><span>Cierra {{ votacion.cierre|date:"j M Y · g:i a" }} {% regla "RN-02" %}</span></div></div></div>
     <div class="col-md-6"><div class="regla"><span class="ic">🔒</span><div><b>Tu voto no se puede cambiar</b><span>Por eso te pedimos confirmarlo antes. {% regla "RN-05" %}</span></div></div></div>
     <div class="col-md-6"><div class="regla"><span class="ic">%</span><div><b>Resultados: {{ votacion.get_visibilidad_display|lower }}</b><span>Configurable por votación. {% regla "RN-10" "P-05" %}</span></div></div></div>
@@ -27,8 +27,8 @@
     </div></div></div>
   </div>
 
-  {% if ya_voto %}
-    <div class="alert alert-success m-0">Ya votaste en esta votación{% if votacion.frecuencia == "diaria" %} hoy{% endif %}. Puedes ver tu comprobante en <a href="{% url 'cuentas:mis_votos' %}">Mis votos</a>.</div>
+  {% if voto_categoria %}
+    <div class="alert alert-success m-0">Ya votaste en la categoría <b>{{ votacion.categoria.nombre }}</b>{% if voto_categoria.votacion_id != votacion.pk %} (en «{{ voto_categoria.votacion.nombre }}»){% endif %}. Solo se permite un voto por categoría; puedes ver tu comprobante en <a href="{% url 'cuentas:mis_votos' %}">Mis votos</a>.</div>
   {% endif %}
 
   {% if es_jurado_aqui %}
