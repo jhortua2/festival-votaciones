@@ -163,11 +163,12 @@ SECURE_REFERRER_POLICY = "same-origin"
 LOGIN_MAX_INTENTOS = int(os.environ.get("LOGIN_MAX_INTENTOS", "5"))
 LOGIN_BLOQUEO_MINUTOS = int(os.environ.get("LOGIN_BLOQUEO_MINUTOS", "15"))
 
-if not DEBUG:
-    # Solo con HTTPS (al desplegar): cookies seguras y HTTPS obligatorio
+if os.environ.get("DJANGO_HTTPS", "0") == "1":
+    # Solo al desplegar con un certificado HTTPS (DJANGO_HTTPS=1 en el .env): cookies seguras y HTTPS obligatorio.
+    # En el PC y en las pruebas de GitHub se trabaja con http, por eso viene apagado.
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = os.environ.get("DJANGO_SSL_REDIRECT", "1") == "1"
+    SECURE_SSL_REDIRECT = True
     SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o]

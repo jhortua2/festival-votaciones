@@ -171,7 +171,7 @@ La API corre en el servidor local (`localhost`); para verla, arranque el proyect
 | Cabeceras: `X-Frame-Options: DENY` (clickjacking), `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin` | `config/settings.py` |
 | Formularios de Django que validan en el servidor (registro, ingreso, voto, panel) | `cuentas/forms.py`, `votaciones/forms.py`, `votaciones/forms_panel.py` |
 | Permisos por rol: el panel solo para administradores, el panel del jurado solo para jurados | `solo_admin` en `votaciones/views_panel.py` |
-| Sin secretos en el repositorio: claves en `.env` (no se sube); en producción (`DJANGO_DEBUG=0`) la clave secreta es obligatoria y se activan cookies seguras, HTTPS y HSTS | `.gitignore`, `.env.example` y `config/settings.py` |
+| Sin secretos en el repositorio: claves en `.env` (no se sube); con `DJANGO_DEBUG=0` la clave secreta es obligatoria, y al desplegar con certificado (`DJANGO_HTTPS=1`) se activan cookies seguras, HTTPS obligatorio y HSTS | `.gitignore`, `.env.example` y `config/settings.py` |
 
 ### Prueba de concurrencia
 
