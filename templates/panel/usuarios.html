@@ -1,0 +1,57 @@
+{% extends "panel/base_panel.html" %}
+{% block titulo %}Usuarios{% endblock %}
+{% block panel %}
+<div><span class="eyebrow">Administración de cuentas</span><h1 class="h3 fw-bold m-0">Usuarios</h1>
+  <p class="text-secondary m-0">Crea cuentas de administrador o jurado, cambia el rol de cualquier usuario y actívalas o desactívalas. Los votantes se registran solos desde el sitio. Las cuentas no se borran para no perder sus votos ni la auditoría.</p></div>
+
+<div class="row g-2">
+  {% for valor, nombre in roles %}
+  <div class="col-4"><a class="panel-caja h-100 d-block text-decoration-none" href="?rol={{ valor }}">
+    <span class="nota">{{ nombre }}{% if valor != "admin" %}s{% else %}es{% endif %}</span>
+    <div class="fs-4 fw-bold">{% for k, n in por_rol.items %}{% if k == valor %}{{ n }}{% endif %}{% endfor %}</div></a></div>
+  {% endfor %}
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-8">
+    <form method="get" class="panel-caja d-flex flex-wrap gap-2 align-items-end mb-3">
+      <div><label class="form-label small" for="f-rol">Rol</label>
+        <select id="f-rol" name="rol" class="form-select form-select-sm"><option value="">Todos</option>
+          {% for valor, nombre in roles %}<option value="{{ valor }}" {% if f_rol == valor %}selected{% endif %}>{{ nombre }}</option>{% endfor %}</select></div>
+      <div><label class="form-label small" for="f-q">Nombre o correo</label>
+        <input id="f-q" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Buscar…"></div>
+      <button class="btn btn-sol btn-sm" type="submit">Filtrar</button>
+      {% if f_rol or q %}<a class="btn btn-linea btn-sm" href="{% url 'panel:usuarios' %}">Quitar filtros</a>{% endif %}
+    </form>
+
+    <div class="tabla-caja table-responsive"><table class="table tabla">
+      <thead><tr><th>Usuario</th><th>Rol</th><th>Estado</th><th class="num">Votos</th><th>Acciones</th></tr></thead>
+      <tbody>{% for u in usuarios %}
+        <tr>
+          <td><b>{{ u.get_full_name|default:u.email }}</b>{% if u.pk == request.user.pk %} <span class="nota">(tú)</span>{% endif %}<br><span class="nota">{{ u.email }}</span></td>
+          <td><span class="pill {% if u.rol == 'admin' %}pill-proxima{% elif u.rol == 'jurado' %}pill-borrador{% else %}pill-abierta{% endif %}">{{ u.get_rol_display }}</span></td>
+          <td>{% if u.is_active %}<span class="pill pill-abierta">Activo</span>{% else %}<span class="pill pill-inactiva">Inactivo</span>{% endif %}</td>
+          <td class="num">{{ u.n_votos }}</td>
+          <td><div class="d-flex flex-wrap gap-1">
+            <a class="btn btn-linea btn-sm" href="{% url 'panel:usuario_editar' u.pk %}">Editar</a>
+            {% if u.pk != request.user.pk %}
+            <form method="post" action="{% url 'panel:usuario_estado' u.pk %}" onsubmit="return confirm('¿{% if u.is_active %}Desactivar{% else %}Activar{% endif %} la cuenta {{ u.email|escapejs }}?');">{% csrf_token %}
+              <button class="btn {% if u.is_active %}btn-pollera{% else %}btn-linea{% endif %} btn-sm">{% if u.is_active %}Desactivar{% else %}Activar{% endif %}</button></form>
+            {% endif %}
+          </div></td>
+        </tr>
+      {% empty %}<tr><td colspan="5" class="text-secondary">No hay usuarios con esos filtros.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </div>
+
+  <div class="col-xl-4">
+    <form method="post" class="panel-caja" novalidate>{% csrf_token %}
+      <h2 class="h6 fw-bold">Nuevo usuario</h2>
+      {% if form.non_field_errors %}<div class="alert alert-danger">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>{% endif %}
+      {% for campo in form %}{% include "includes/campo.html" %}{% endfor %}
+      <button class="btn btn-sol" type="submit">Crear usuario</button>
+      <p class="nota mt-2 mb-0"><b>Administrador:</b> entra al panel. <b>Jurado:</b> califica las votaciones que se le asignen. Los <b>votantes</b> no se crean aquí: se registran solos en <b>Ingresar → Regístrate</b>.</p>
+    </form>
+  </div>
+</div>
+{% endblock %}

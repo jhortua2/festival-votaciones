@@ -1,5 +1,8 @@
 from django import forms
+from django.contrib.auth import password_validation
 from django.conf import settings
+
+from cuentas.models import Usuario
 
 from .models import Categoria, Edicion, Opcion, Votacion
 
@@ -129,3 +132,71 @@ class JustificacionForm(forms.Form):
         widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Explica por qué (queda en auditoría)"}),
         error_messages={"required": "La justificación es obligatoria."},
     )
+
+
+class UsuarioForm(_Estilo, forms.Form):
+    """El administrador crea cuentas de administrador o jurado desde el panel (Eje 4: todo desde la app).
+
+    Los votantes no se crean aquí: se registran solos desde el sitio público.
+    """
+    first_name = forms.CharField(label="Nombres", max_length=150)
+    last_name = forms.CharField(label="Apellidos", max_length=150, required=False)
+    email = forms.EmailField(label="Correo electrónico")
+    rol = forms.ChoiceField(label="Rol", choices=())
+    password1 = forms.CharField(label="Contraseña inicial", widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}))
+    password2 = forms.CharField(label="Repite la contraseña", widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["rol"].choices = [(v, n) for v, n in Usuario.Rol.choices if v != Usuario.Rol.VOTANTE]
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].lower().strip()
+        if Usuario.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("Ya existe una cuenta con ese correo.")
+        return email
+
+    def clean(self):
+        datos = super().clean()
+        p1, p2 = datos.get("password1"), datos.get("password2")
+        if p1 and p2 and p1 != p2:
+            self.add_error("password2", "Las contraseñas no coinciden.")
+        if p1:
+            try:
+                password_validation.validate_password(p1, Usuario(email=datos.get("email"), first_name=datos.get("first_name", "")))
+            except forms.ValidationError as e:
+                self.add_error("password1", e)
+        return datos
+
+
+class UsuarioEditarForm(_Estilo, forms.ModelForm):
+    """Editar datos y rol de una cuenta. La contraseña solo cambia si se escribe una nueva."""
+    password1 = forms.CharField(label="Nueva contraseña (opcional)", required=False,
+                                widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}),
+                                help_text="Déjala vacía para conservar la contraseña actual.")
+    password2 = forms.CharField(label="Repite la nueva contraseña", required=False,
+                                widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}))
+
+    class Meta:
+        model = Usuario
+        fields = ["first_name", "last_name", "email", "rol"]
+        labels = {"first_name": "Nombres", "last_name": "Apellidos", "email": "Correo electrónico", "rol": "Rol"}
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].lower().strip()
+        if Usuario.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError("Ya existe otra cuenta con ese correo.")
+        return email
+
+    def clean(self):
+        datos = super().clean()
+        p1, p2 = datos.get("password1"), datos.get("password2")
+        if p1 or p2:
+            if p1 != p2:
+                self.add_error("password2", "Las contraseñas no coinciden.")
+            elif p1:
+                try:
+                    password_validation.validate_password(p1, self.instance)
+                except forms.ValidationError as e:
+                    self.add_error("password1", e)
+        return datos

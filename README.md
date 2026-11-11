@@ -135,8 +135,11 @@ Iniciar sesión → elegir categoría → elegir votación → seleccionar una o
 | Categorías | ✅ | ✅ | Activar / inactivar | Solo si no tiene votaciones (si no, se inactiva) |
 | Votaciones | ✅ | ✅ | Publicar / cerrar | Solo si no tiene votos ni calificaciones (si no, se cierra) |
 | Opciones | ✅ | ✅ | Activar / inactivar | Solo si no tiene votos (RN-08) |
+| Usuarios | ✅ admin o jurado (los votantes se registran solos) | ✅ (datos, rol y contraseña) | Activar / desactivar | No se borran: se desactivan para conservar votos y auditoría |
 
 Las eliminaciones van por POST con CSRF y piden confirmación; nunca se borra un voto (RN-05).
+
+En **Panel → Usuarios** (`/panel/usuarios/`) el administrador crea cuentas de administrador o jurado sin usar la terminal ni Django Admin (los votantes se registran solos desde el sitio), cambia el rol de cualquier usuario y lo desactiva. Un administrador no puede cambiar su propio rol ni desactivarse, y el sistema no deja quedar sin ningún administrador activo. Una cuenta desactivada no puede iniciar sesión.
 
 ### API GET
 
@@ -188,7 +191,7 @@ Crea un usuario temporal, envía varios votos **al mismo tiempo** en la misma ca
 py manage.py test
 ```
 
-Son **87 pruebas** (las de la Entrega 3 están en `votaciones/tests/test_entrega3.py`, una clase por caso CP-01 a CP-10, más la gestión desde el panel, y las de seguridad en `votaciones/tests/test_seguridad.py`). Deben terminar en `OK`. Las pruebas de hilos simultáneos reales (CP-09) solo corren con MySQL.
+Son **101 pruebas** (la gestión de usuarios desde el panel está en `votaciones/tests/test_usuarios_panel.py`; las de la Entrega 3 están en `votaciones/tests/test_entrega3.py`, una clase por caso CP-01 a CP-10, más la gestión desde el panel, y las de seguridad en `votaciones/tests/test_seguridad.py`). Deben terminar en `OK`. Las pruebas de hilos simultáneos reales (CP-09) solo corren con MySQL.
 
 | Grupo | Qué prueban |
 |---|---|
@@ -205,7 +208,7 @@ Son **87 pruebas** (las de la Entrega 3 están en `votaciones/tests/test_entrega
 
 ### Evidencia reproducible en GitHub
 
-Cada vez que alguien sube un commit, GitHub corre las pruebas solo, contra un **MySQL 8 real** ([`.github/workflows/pruebas.yml`](.github/workflows/pruebas.yml)): instala las librerías, crea las tablas, carga los datos de prueba y corre las 87 pruebas, incluidas las de solicitudes simultáneas. El resultado se ve en la pestaña **Actions** del repositorio y en la insignia de arriba de este README.
+Cada vez que alguien sube un commit, GitHub corre las pruebas solo, contra un **MySQL 8 real** ([`.github/workflows/pruebas.yml`](.github/workflows/pruebas.yml)): instala las librerías, crea las tablas, carga los datos de prueba y corre las 101 pruebas, incluidas las de solicitudes simultáneas. El resultado se ve en la pestaña **Actions** del repositorio y en la insignia de arriba de este README.
 
 ## 8. Modo rápido sin MySQL (opcional)
 
@@ -252,7 +255,7 @@ festival-votaciones/
 | Comprobante / Mis votos | `/comprobante/<código>/` · `/cuentas/mis-votos/` |
 | Panel | `/panel/` |
 | Ediciones, categorías, votaciones y opciones | `/panel/ediciones/` · `/panel/categorias/` · `/panel/votaciones/` · `/panel/votaciones/<id>/opciones/` |
-| Jurados / Votos registrados / Resultados / Auditoría | `/panel/jurados/` · `/panel/votos/` · `/panel/resultados/` · `/panel/auditoria/` |
+| Jurados / Usuarios / Votos registrados / Resultados / Auditoría | `/panel/jurados/` · `/panel/usuarios/` · `/panel/votos/` · `/panel/resultados/` · `/panel/auditoria/` |
 | API GET de categorías | `/api/categorias/` |
 | Panel del jurado / Calificar | `/jurado/` · `/jurado/votaciones/<id>/` |
 

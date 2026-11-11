@@ -14,7 +14,8 @@ from auditoria.models import Registro
 from auditoria.servicios import registrar
 from cuentas.models import Usuario
 
-from .forms_panel import CategoriaForm, EdicionForm, JuradoForm, JustificacionForm, OpcionForm, VotacionForm
+from .forms_panel import (CategoriaForm, EdicionForm, JuradoForm, JustificacionForm, OpcionForm, UsuarioEditarForm,
+                          UsuarioForm, VotacionForm)
 from .models import Calificacion, Categoria, Edicion, Opcion, Votacion, Voto
 
 
@@ -325,6 +326,94 @@ def jurados(request):
                        n_calif=Count("calificaciones__votacion", distinct=True))
              .order_by("first_name"))
     return render(request, "panel/jurados.html", {"seccion": "jurados", "jurados": lista, "form": form})
+
+
+# ---------------------------------------------------------------- Usuarios (Eje 4)
+def _aplicar_rol(usuario, rol):
+    """El rol decide los permisos. Solo el administrador entra al panel."""
+    usuario.rol = rol
+    usuario.is_staff = rol == Usuario.Rol.ADMIN
+    if rol != Usuario.Rol.ADMIN:
+        usuario.is_superuser = False
+
+
+def _es_ultimo_admin(usuario):
+    """True si `usuario` es el único administrador activo (no se puede quedar el sistema sin admin)."""
+    if not (usuario.is_active and usuario.es_admin):
+        return False
+    otros = Usuario.objects.filter(is_active=True).filter(Q(rol=Usuario.Rol.ADMIN) | Q(is_superuser=True)).exclude(pk=usuario.pk)
+    return not otros.exists()
+
+
+@solo_admin
+def usuarios(request):
+    """Gestión de cuentas desde la app: crear administradores, jurados y votantes, cambiar rol y desactivar."""
+    form = UsuarioForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        d = form.cleaned_data
+        u = Usuario(username=d["email"], email=d["email"], first_name=d["first_name"], last_name=d["last_name"])
+        _aplicar_rol(u, d["rol"])
+        u.set_password(d["password1"])
+        u.save()
+        registrar(request, "usuario_creado", f"{u.email} · rol {u.get_rol_display()}")
+        messages.success(request, f"Cuenta de {u.get_full_name() or u.email} creada con rol {u.get_rol_display().lower()}.")
+        return redirect("panel:usuarios")
+
+    lista = Usuario.objects.annotate(n_votos=Count("votos", distinct=True)).order_by("rol", "first_name", "email")
+    f_rol, buscar = request.GET.get("rol", ""), request.GET.get("q", "").strip()
+    if f_rol in Usuario.Rol.values:
+        lista = lista.filter(rol=f_rol)
+    if buscar:
+        lista = lista.filter(Q(email__icontains=buscar) | Q(first_name__icontains=buscar) | Q(last_name__icontains=buscar))
+    por_rol = {r: Usuario.objects.filter(rol=r).count() for r in Usuario.Rol.values}
+    return render(request, "panel/usuarios.html", {
+        "seccion": "usuarios", "form": form, "usuarios": lista, "roles": Usuario.Rol.choices,
+        "por_rol": por_rol, "f_rol": f_rol, "q": buscar,
+    })
+
+
+@solo_admin
+def usuario_editar(request, pk):
+    u = get_object_or_404(Usuario, pk=pk)
+    rol_antes = u.rol
+    form = UsuarioEditarForm(request.POST or None, instance=u)
+    if request.method == "POST" and form.is_valid():
+        nuevo_rol = form.cleaned_data["rol"]
+        if nuevo_rol != rol_antes and u.pk == request.user.pk:
+            form.add_error("rol", "No puedes cambiar tu propio rol. Pídeselo a otro administrador.")
+        elif nuevo_rol != Usuario.Rol.ADMIN and _es_ultimo_admin(Usuario.objects.get(pk=u.pk)):
+            form.add_error("rol", "Es el único administrador activo; crea otro antes de cambiarle el rol.")
+        else:
+            u = form.save(commit=False)
+            u.username = u.email
+            _aplicar_rol(u, nuevo_rol)
+            if form.cleaned_data.get("password1"):
+                u.set_password(form.cleaned_data["password1"])
+            u.save()
+            detalle = u.email if nuevo_rol == rol_antes else f"{u.email} · rol {rol_antes} → {nuevo_rol}"
+            registrar(request, "usuario_editado", detalle)
+            messages.success(request, "Usuario actualizado.")
+            return redirect("panel:usuarios")
+    return render(request, "panel/form.html", {"seccion": "usuarios", "form": form, "titulo": f"Editar usuario: {u.email}",
+                                               "volver": "panel:usuarios",
+                                               "nota": "El rol define los permisos: el administrador entra al panel, el jurado califica y el votante vota."})
+
+
+@solo_admin
+@require_POST
+def usuario_estado(request, pk):
+    """Activa o desactiva una cuenta. No se borra para no perder sus votos ni la auditoría."""
+    u = get_object_or_404(Usuario, pk=pk)
+    if u.pk == request.user.pk:
+        messages.error(request, "No puedes desactivar tu propia cuenta.")
+    elif u.is_active and _es_ultimo_admin(u):
+        messages.error(request, "Es el único administrador activo; no se puede desactivar.")
+    else:
+        u.is_active = not u.is_active
+        u.save(update_fields=["is_active"])
+        registrar(request, "usuario_activado" if u.is_active else "usuario_desactivado", u.email)
+        messages.success(request, f"Cuenta {u.email} {'activada' if u.is_active else 'desactivada'}.")
+    return redirect("panel:usuarios")
 
 
 # ---------------------------------------------------------------- 14. Resultados
