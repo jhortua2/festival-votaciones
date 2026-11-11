@@ -34,7 +34,7 @@ def emitir_voto(usuario, opcion_id, request=None, votacion=None):
     """Registra un voto o lanza VotoRechazado.
 
     Validaciones del servidor (Entrega 3):
-    - usuario autenticado (CP-04);
+    - usuario autenticado (CP-04) y que no sea administrador (RN-16, propuesta);
     - la opción existe, está activa y pertenece a la votación que se está mostrando (CP-06);
     - la votación está publicada y abierta, y su categoría y edición están activas (CP-05);
     - un solo voto por usuario, categoría y edición (CP-02). La restricción única de MySQL
@@ -42,6 +42,10 @@ def emitir_voto(usuario, opcion_id, request=None, votacion=None):
     """
     if not usuario.is_authenticated:
         raise VotoRechazado("sin_sesion", "Debes iniciar sesión para votar.")
+    if usuario.es_admin:
+        # RN-16 (propuesta): quien gestiona las votaciones y ve los resultados no participa en ellas
+        raise VotoRechazado("admin_no_vota", "Los administradores gestionan las votaciones y no pueden votar (RN-16). "
+                                             "Si quieres votar, usa una cuenta de votante.")
 
     with transaction.atomic():
         try:

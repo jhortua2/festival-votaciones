@@ -92,6 +92,12 @@ class VotacionForm(_Estilo, forms.ModelForm):
             for f in ("categoria", "apertura", "modo", "peso_jurado", "escala_maxima"):
                 self.fields[f].disabled = True
 
+    def clean(self):
+        datos = super().clean()
+        if datos.get("modo") == Votacion.Modo.PUBLICO and datos.get("jurados"):
+            self.add_error("jurados", "Las votaciones solo de público no llevan jurado. Quita los jurados o cambia el modo.")
+        return datos
+
 
 class JuradoForm(_Estilo, forms.Form):
     """Crea una cuenta con rol de jurado (la Fundación entrega la contraseña al jurado)."""

@@ -28,7 +28,8 @@ def solo_jurado(vista):
 @solo_jurado
 def inicio(request):
     """Pantalla 15 · Votaciones asignadas al jurado."""
-    asignadas = list(request.user.votaciones_como_jurado.filter(publicada=True).select_related("categoria"))
+    asignadas = list(request.user.votaciones_como_jurado.filter(publicada=True).exclude(modo=Votacion.Modo.PUBLICO)
+                     .select_related("categoria"))
     hechas = set(Calificacion.objects.filter(jurado=request.user).values_list("votacion_id", flat=True))
     for v in asignadas:
         v.calificada = v.pk in hechas

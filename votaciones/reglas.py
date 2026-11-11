@@ -25,6 +25,7 @@ REGLAS = {
     "RN-13": (PROPUESTA, "Solo califican los jurados asignados a la votación."),
     "RN-14": (PROPUESTA, "Cada jurado califica una vez cada opción y no puede cambiarlo."),
     "RN-15": (PROPUESTA, "Un jurado no vota como público en la votación que califica."),
+    "RN-16": (PROPUESTA, "Un administrador no vota: gestiona las votaciones y ve los resultados."),
 }
 
 ETIQUETA = {ENUNCIADO: "Enunciado", APROBADA: "Aprobada", PROPUESTA: "Propuesta"}

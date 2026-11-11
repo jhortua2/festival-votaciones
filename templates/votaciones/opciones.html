@@ -7,6 +7,7 @@
   <div><span class="eyebrow">{{ votacion.nombre }}</span><h1 class="h-display m-0" style="font-size:1.9rem">Escoge tu opción</h1>
     <p class="text-secondary m-0">Toca una tarjeta para seleccionarla. Aún no se registra nada.</p></div>
   {% if voto_categoria %}<div class="alert alert-warning m-0">Ya votaste en la categoría {{ votacion.categoria.nombre }}{% if voto_categoria.votacion_id != votacion.pk %} (en «{{ voto_categoria.votacion.nombre }}»){% endif %}. Si intentas votar otra vez en esta categoría, el sistema lo rechazará (RN-06).</div>{% endif %}
+  {% if es_admin %}<div class="alert alert-info m-0">Eres administrador: puedes ver las opciones, pero no votar (RN-16, propuesta del equipo).</div>{% endif %}
   {% if not votacion.esta_abierta %}<div class="alert alert-info m-0">Puedes ver las opciones, pero la votación está {{ votacion.estado_etiqueta|lower }}.</div>{% endif %}
   <div class="row g-3" role="radiogroup" aria-label="Opciones de la votación">
     {% for o in opciones %}

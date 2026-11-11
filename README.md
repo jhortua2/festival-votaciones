@@ -191,7 +191,7 @@ Crea un usuario temporal, envía varios votos **al mismo tiempo** en la misma ca
 py manage.py test
 ```
 
-Son **101 pruebas** (la gestión de usuarios desde el panel está en `votaciones/tests/test_usuarios_panel.py`; las de la Entrega 3 están en `votaciones/tests/test_entrega3.py`, una clase por caso CP-01 a CP-10, más la gestión desde el panel, y las de seguridad en `votaciones/tests/test_seguridad.py`). Deben terminar en `OK`. Las pruebas de hilos simultáneos reales (CP-09) solo corren con MySQL.
+Son **108 pruebas** (la gestión de usuarios desde el panel está en `votaciones/tests/test_usuarios_panel.py` y los permisos por rol en `votaciones/tests/test_roles.py`; las de la Entrega 3 están en `votaciones/tests/test_entrega3.py`, una clase por caso CP-01 a CP-10, más la gestión desde el panel, y las de seguridad en `votaciones/tests/test_seguridad.py`). Deben terminar en `OK`. Las pruebas de hilos simultáneos reales (CP-09) solo corren con MySQL.
 
 | Grupo | Qué prueban |
 |---|---|
@@ -208,7 +208,7 @@ Son **101 pruebas** (la gestión de usuarios desde el panel está en `votaciones
 
 ### Evidencia reproducible en GitHub
 
-Cada vez que alguien sube un commit, GitHub corre las pruebas solo, contra un **MySQL 8 real** ([`.github/workflows/pruebas.yml`](.github/workflows/pruebas.yml)): instala las librerías, crea las tablas, carga los datos de prueba y corre las 101 pruebas, incluidas las de solicitudes simultáneas. El resultado se ve en la pestaña **Actions** del repositorio y en la insignia de arriba de este README.
+Cada vez que alguien sube un commit, GitHub corre las pruebas solo, contra un **MySQL 8 real** ([`.github/workflows/pruebas.yml`](.github/workflows/pruebas.yml)): instala las librerías, crea las tablas, carga los datos de prueba y corre las 108 pruebas, incluidas las de solicitudes simultáneas. El resultado se ve en la pestaña **Actions** del repositorio y en la insignia de arriba de este README.
 
 ## 8. Modo rápido sin MySQL (opcional)
 
@@ -275,6 +275,8 @@ festival-votaciones/
 | RN-13 Solo califican los jurados asignados | Propuesta | Campo `jurados` (asignación) y `servicios.calificar` |
 | RN-14 Una calificación por jurado y opción | Propuesta | Restricción única `(jurado, opcion)` en MySQL |
 | RN-15 El jurado no vota como público | Propuesta | `servicios.emitir_voto` |
+| RN-16 El administrador no vota (gestiona y ve resultados) | Propuesta | `servicios.emitir_voto` |
+| Una votación solo de público no lleva jurado | Validación | `forms_panel.VotacionForm.clean` y `views_jurado.inicio` |
 
 Cuando la Fundación apruebe una regla, se cambia a `APROBADA` en `votaciones/reglas.py` y todas las pantallas lo muestran solas.
 

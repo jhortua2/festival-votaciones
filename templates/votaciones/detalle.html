@@ -31,7 +31,9 @@
     <div class="alert alert-success m-0">Ya votaste en la categoría <b>{{ votacion.categoria.nombre }}</b>{% if voto_categoria.votacion_id != votacion.pk %} (en «{{ voto_categoria.votacion.nombre }}»){% endif %}. Solo se permite un voto por categoría; puedes ver tu comprobante en <a href="{% url 'cuentas:mis_votos' %}">Mis votos</a>.</div>
   {% endif %}
 
-  {% if es_jurado_aqui %}
+  {% if es_admin %}
+    <div class="ejemplo">Eres administrador: gestionas las votaciones desde el <a href="{% url 'panel:panel' %}">panel</a> y no votas como público {% regla "RN-16" %}. Si quieres votar, usa una cuenta de votante.</div>
+  {% elif es_jurado_aqui %}
     <div class="ejemplo">Eres jurado de esta votación: califícala desde <a href="{% url 'jurado:calificar' votacion.pk %}">tu panel de jurado</a>. Como jurado no votas como público (RN-15).</div>
   {% elif votacion.esta_abierta and not votacion.tiene_publico %}
     <div class="ejemplo">En esta votación solo califica el jurado.</div>

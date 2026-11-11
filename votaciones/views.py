@@ -70,6 +70,7 @@ def votacion_detalle(request, pk):
         "voto_categoria": voto_en_categoria(request.user, votacion.categoria),
         "n_opciones": votacion.opciones_activas().count(),
         "es_jurado_aqui": request.user.is_authenticated and votacion.jurados.filter(pk=request.user.pk).exists(),
+        "es_admin": request.user.is_authenticated and request.user.es_admin,
     }
     if votacion.resultados_publicos():
         contexto["resultados"], contexto["total"] = votacion.conteo()
@@ -83,6 +84,7 @@ def votacion_opciones(request, pk):
         "votacion": votacion,
         "opciones": votacion.opciones_activas(),
         "voto_categoria": voto_en_categoria(request.user, votacion.categoria),
+        "es_admin": request.user.is_authenticated and request.user.es_admin,
     })
 
 
