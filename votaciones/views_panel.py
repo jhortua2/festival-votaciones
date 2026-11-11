@@ -190,7 +190,8 @@ def votacion_form(request, pk=None):
         return redirect("panel:opciones", pk=v.pk)
     titulo = f"Editar votación: {votacion.nombre}" if votacion else "Nueva votación"
     return render(request, "panel/form.html", {"seccion": "votaciones", "form": form, "titulo": titulo, "volver": "panel:votaciones",
-                                               "nota": "Se guarda como borrador. Para publicarla necesita mínimo 2 opciones activas (RN-07)."})
+                                               "nota": ("Si ya está publicada, sigue publicada al guardar los cambios." if votacion and votacion.publicada
+                                                        else "Se guarda como borrador. Para publicarla necesita mínimo 2 opciones activas (RN-07).")})
 
 
 @solo_admin
