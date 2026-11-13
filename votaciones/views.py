@@ -31,6 +31,9 @@ def _resultados_publicados():
             lider = v.g["oficial"]["opciones"]
             v.lider = lider[0] if len(lider) == 1 else None
             v.lider_pct = (v.lider.pct_jurado if v.es_independiente else v.lider.final) if v.lider else None
+            if v.g["publico"]:                                  # modo independiente: también el del público
+                pub = v.g["publico"]["opciones"]
+                v.lider_pub = pub[0] if len(pub) == 1 else None
             publicadas.append(v)
     return publicadas
 

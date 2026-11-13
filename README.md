@@ -223,7 +223,7 @@ Crea votantes temporales; cada uno envía **dos votos casi a la vez** en la mism
 py manage.py test
 ```
 
-Son **128 pruebas** (resultados y ganadores en `test_resultados.py`, datos personales en `test_datos_personales.py`, carga en `test_carga.py`, gestión de usuarios en `test_usuarios_panel.py` y permisos por rol en `test_roles.py`, todas en `votaciones/tests/`; las de la Entrega 3 están en `votaciones/tests/test_entrega3.py`, una clase por caso CP-01 a CP-10, más la gestión desde el panel, y las de seguridad en `votaciones/tests/test_seguridad.py`). Deben terminar en `OK`. Las pruebas de hilos simultáneos reales (CP-09) solo corren con MySQL.
+Son **129 pruebas** (resultados y ganadores en `test_resultados.py`, datos personales en `test_datos_personales.py`, carga en `test_carga.py`, gestión de usuarios en `test_usuarios_panel.py` y permisos por rol en `test_roles.py`, todas en `votaciones/tests/`; las de la Entrega 3 están en `votaciones/tests/test_entrega3.py`, una clase por caso CP-01 a CP-10, más la gestión desde el panel, y las de seguridad en `votaciones/tests/test_seguridad.py`). Deben terminar en `OK`. Las pruebas de hilos simultáneos reales (CP-09) solo corren con MySQL.
 
 | Grupo | Qué prueban |
 |---|---|
@@ -241,7 +241,7 @@ Son **128 pruebas** (resultados y ganadores en `test_resultados.py`, datos perso
 
 ### Evidencia reproducible en GitHub
 
-Cada vez que alguien sube un commit, GitHub corre las pruebas solo, contra un **MySQL 8 real** ([`.github/workflows/pruebas.yml`](.github/workflows/pruebas.yml)): instala las librerías, crea las tablas, carga los datos de prueba y corre las 128 pruebas, incluidas las de solicitudes simultáneas. El resultado se ve en la pestaña **Actions** del repositorio y en la insignia de arriba de este README.
+Cada vez que alguien sube un commit, GitHub corre las pruebas solo, contra un **MySQL 8 real** ([`.github/workflows/pruebas.yml`](.github/workflows/pruebas.yml)): instala las librerías, crea las tablas, carga los datos de prueba y corre las 129 pruebas, incluidas las de solicitudes simultáneas. El resultado se ve en la pestaña **Actions** del repositorio y en la insignia de arriba de este README.
 
 ## 8. Modo rápido sin MySQL (opcional)
 

@@ -62,9 +62,11 @@
           <div class="d-flex justify-content-between gap-2"><span class="nota">{{ v.categoria.nombre }}</span>
             <span class="pill {% if v.estado == 'cerrada' %}pill-cerrada{% else %}pill-abierta{% endif %}">{{ v.estado_etiqueta }}</span></div>
           <b>{{ v.nombre }}</b>
-          {% if v.lider %}
-            <span>{% if v.g.definitivo %}🏆 Ganador{% else %}Va ganando{% endif %}{% if v.es_independiente %} (jurado){% endif %}:
-              <b>{{ v.lider.nombre }}</b> · {{ v.lider_pct|floatformat:1 }} %</span>
+          {% if v.es_independiente %}
+            <span>{% if v.lider %}{% if v.g.definitivo %}🏆 Ganador{% else %}Va ganando{% endif %} jurado: <b>{{ v.lider.nombre }}</b> · {{ v.lider_pct|floatformat:1 }} %{% elif v.g.oficial.empate %}Jurado: empate{% else %}<span class="text-secondary">Jurado: aún sin calificar</span>{% endif %}</span>
+            <span>{% if v.lider_pub %}{% if v.g.definitivo %}⭐ Ganador{% else %}Va ganando{% endif %} público: <b>{{ v.lider_pub.nombre }}</b> · {{ v.lider_pub.pct_publico|floatformat:1 }} %{% elif v.g.publico.empate %}Público: empate entre {% for o in v.g.publico.opciones %}{{ o.nombre }}{% if not forloop.last %} y {% endif %}{% endfor %}{% else %}<span class="text-secondary">Público: todavía sin votos</span>{% endif %}</span>
+          {% elif v.lider %}
+            <span>{% if v.g.definitivo %}🏆 Ganador{% else %}Va ganando{% endif %}: <b>{{ v.lider.nombre }}</b> · {{ v.lider_pct|floatformat:1 }} %</span>
           {% elif v.g.oficial.empate %}
             <span>Empate entre {% for o in v.g.oficial.opciones %}{{ o.nombre }}{% if not forloop.last %} y {% endif %}{% endfor %}</span>
           {% else %}

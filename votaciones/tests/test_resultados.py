@@ -140,3 +140,14 @@ class ResultadosEnElInicio(Base):
             v.save()
         r = self.client.get(reverse("votaciones:inicio"))
         self.assertNotContains(r, "Ver todos los resultados")
+
+
+    def test_independiente_muestra_publico_aunque_el_jurado_no_haya_calificado(self):
+        self.rey_v.modo = Votacion.Modo.INDEPENDIENTE
+        self.rey_v.visibilidad = Votacion.Visibilidad.TIEMPO_REAL
+        self.rey_v.save()
+        Voto.objects.create(usuario=self.votante, opcion=self.r1)
+        r = self.client.get(reverse("votaciones:inicio"))
+        self.assertContains(r, "Jurado: aún sin calificar")
+        self.assertContains(r, "Va ganando público")
+        self.assertContains(r, self.r1.nombre)
