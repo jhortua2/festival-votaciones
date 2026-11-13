@@ -19,16 +19,36 @@ def _votaciones_publicas():
     )
 
 
+def _resultados_publicados():
+    """Votaciones cuyos resultados puede ver el público según su visibilidad (RN-10), con su ganador.
+    No incluye ningún dato de los votantes."""
+    publicadas = []
+    for v in _votaciones_publicas().order_by("categoria__orden", "apertura"):
+        if v.resultados_publicos():
+            v.filas, v.total = v.resultados_ponderados()
+            v.g = v.ganadores(v.filas)
+            v.ranking = v.ranking_publico(v.filas) if v.es_independiente else None
+            lider = v.g["oficial"]["opciones"]
+            v.lider = lider[0] if len(lider) == 1 else None
+            v.lider_pct = (v.lider.pct_jurado if v.es_independiente else v.lider.final) if v.lider else None
+            publicadas.append(v)
+    return publicadas
+
+
 def inicio(request):
     """Pantalla 1 · CU-03 · RF-07"""
     edicion = Edicion.actual()
     votaciones = list(_votaciones_publicas())
     abiertas = [v for v in votaciones if v.esta_abierta]
     categorias = Categoria.objects.filter(edicion=edicion, activa=True) if edicion else []
+    # Resultados en el inicio (Eje 4): las abiertas en tiempo real primero, luego las cerradas.
+    resultados = sorted(_resultados_publicados(), key=lambda v: (not v.esta_abierta, v.categoria.orden))
     return render(request, "votaciones/inicio.html", {
         "abiertas": abiertas,
         "destacada": abiertas[0] if abiertas else None,
         "categorias": categorias,
+        "resultados": resultados[:3],
+        "hay_mas_resultados": len(resultados) > 3,
     })
 
 
@@ -82,14 +102,7 @@ def resultados(request):
     """Publicación de resultados (Eje 4). Solo aparecen las votaciones cuya visibilidad lo permite (RN-10):
     «públicos en tiempo real» desde que abren, «públicos al cierre» cuando cierran. Las de «solo
     administradores» nunca se muestran aquí. No se expone ningún dato de los votantes."""
-    publicadas = []
-    for v in _votaciones_publicas().order_by("categoria__orden", "apertura"):
-        if v.resultados_publicos():
-            v.filas, v.total = v.resultados_ponderados()
-            v.g = v.ganadores(v.filas)
-            v.ranking = v.ranking_publico(v.filas) if v.es_independiente else None
-            publicadas.append(v)
-    return render(request, "votaciones/resultados.html", {"votaciones": publicadas, "edicion": Edicion.actual()})
+    return render(request, "votaciones/resultados.html", {"votaciones": _resultados_publicados(), "edicion": Edicion.actual()})
 
 
 def votacion_opciones(request, pk):

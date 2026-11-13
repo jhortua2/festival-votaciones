@@ -121,3 +121,22 @@ class PublicacionDeResultados(Base):
         self.aire.save()
         r = self.client.get(reverse("votaciones:resultados"))
         self.assertNotContains(r, self.votante.email)
+
+
+class ResultadosEnElInicio(Base):
+    def test_inicio_muestra_quien_va_ganando(self):
+        self.aire.visibilidad = Votacion.Visibilidad.TIEMPO_REAL
+        self.aire.save()
+        Voto.objects.create(usuario=self.votante, opcion=self.a1)
+        r = self.client.get(reverse("votaciones:inicio"))
+        self.assertContains(r, "Va ganando")
+        self.assertContains(r, "Paseo")
+        self.assertContains(r, "Ver todos los resultados")
+        self.assertNotContains(r, self.votante.email)
+
+    def test_sin_resultados_publicables_no_aparece_la_seccion(self):
+        for v in Votacion.objects.all():
+            v.visibilidad = Votacion.Visibilidad.SOLO_ADMIN
+            v.save()
+        r = self.client.get(reverse("votaciones:inicio"))
+        self.assertNotContains(r, "Ver todos los resultados")

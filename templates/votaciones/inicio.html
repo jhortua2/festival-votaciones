@@ -49,6 +49,35 @@
   <div class="ejemplo">No hay votaciones abiertas en este momento. Revisa las categorías para ver las próximas.</div>
   {% endif %}
 
+  {% if resultados %}
+  <section class="d-flex flex-column gap-2" aria-labelledby="t-resultados">
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-2">
+      <h2 class="h5 fw-bold m-0" id="t-resultados">Resultados</h2>
+      <a class="small fw-semibold" href="{% url 'votaciones:resultados' %}">Ver todos los resultados →</a>
+    </div>
+    <div class="row g-3">
+      {% for v in resultados %}
+      <div class="col-12 col-md-6 col-lg-4">
+        <a class="panel-caja h-100 d-flex flex-column gap-1 text-reset text-decoration-none" href="{% url 'votaciones:detalle' v.pk %}">
+          <div class="d-flex justify-content-between gap-2"><span class="nota">{{ v.categoria.nombre }}</span>
+            <span class="pill {% if v.estado == 'cerrada' %}pill-cerrada{% else %}pill-abierta{% endif %}">{{ v.estado_etiqueta }}</span></div>
+          <b>{{ v.nombre }}</b>
+          {% if v.lider %}
+            <span>{% if v.g.definitivo %}🏆 Ganador{% else %}Va ganando{% endif %}{% if v.es_independiente %} (jurado){% endif %}:
+              <b>{{ v.lider.nombre }}</b> · {{ v.lider_pct|floatformat:1 }} %</span>
+          {% elif v.g.oficial.empate %}
+            <span>Empate entre {% for o in v.g.oficial.opciones %}{{ o.nombre }}{% if not forloop.last %} y {% endif %}{% endfor %}</span>
+          {% else %}
+            <span class="text-secondary">Todavía sin votos</span>
+          {% endif %}
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+    {% if hay_mas_resultados %}<p class="nota m-0">Hay más resultados publicados. <a href="{% url 'votaciones:resultados' %}">Verlos todos</a></p>{% endif %}
+  </section>
+  {% endif %}
+
   <section class="d-flex flex-column gap-3">
     <h2 class="h5 fw-bold m-0">Categorías</h2>
     <div class="row g-3">
