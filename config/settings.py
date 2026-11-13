@@ -27,9 +27,6 @@ _cargar_env(BASE_DIR / ".env")
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "solo-para-desarrollo-cambie-esta-clave")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-# Dominios que da el servicio de despliegue (Vercel): se agregan solos.
-DOMINIOS_SERVIDOR = [os.environ[v] for v in ("VERCEL_PROJECT_PRODUCTION_URL", "VERCEL_URL", "VERCEL_BRANCH_URL") if os.environ.get(v)]
-ALLOWED_HOSTS += DOMINIOS_SERVIDOR
 
 if not DEBUG and SECRET_KEY.startswith("solo-para-desarrollo"):
     # En producción la clave secreta (con la que se firman las sesiones y el token CSRF) es obligatoria
@@ -52,7 +49,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",   # sirve los archivos estáticos en el servidor público
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -108,15 +104,7 @@ else:
             "TEST": {"CHARSET": "utf8mb4", "COLLATION": "utf8mb4_unicode_ci"},
         }
     }
-    if os.environ.get("DB_SSL", "0") == "1":
-        # Base MySQL en la nube (por ejemplo TiDB Cloud): conexión cifrada y verificación del certificado.
-        import certifi
-        DATABASES["default"]["OPTIONS"]["ssl"] = {"ca": certifi.where()}
 
-# Caché: en el PC basta la memoria. En un servidor con varias instancias (Vercel) los intentos fallidos
-# de inicio de sesión se guardan en la base de datos para que el bloqueo funcione en todas.
-if os.environ.get("DJANGO_CACHE_DB", "0") == "1":
-    CACHES = {"default": {"BACKEND": "django.core.cache.backends.db.DatabaseCache", "LOCATION": "cache_django"}}
 
 AUTH_USER_MODEL = "cuentas.Usuario"
 
@@ -136,12 +124,6 @@ USE_THOUSAND_SEPARATOR = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-# WhiteNoise busca los archivos en las carpetas de la app, así no hace falta correr collectstatic en el servidor.
-WHITENOISE_USE_FINDERS = True
-STORAGES = {
-    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
-}
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -191,7 +173,6 @@ if os.environ.get("DJANGO_HTTPS", "0") == "1":
     SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o]
-    CSRF_TRUSTED_ORIGINS += ["https://" + d for d in DOMINIOS_SERVIDOR]
-    # En Vercel (y en casi todos los servidores) el HTTPS lo atiende un proxy que le avisa a Django
+    # En casi todos los servidores el HTTPS lo atiende un proxy que le avisa a Django
     # con esta cabecera; sin ella, Django creería que la petición es http y redirigiría en bucle.
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

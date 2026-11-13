@@ -215,7 +215,7 @@ Crea votantes temporales; cada uno envía **dos votos casi a la vez** en la mism
 - La API, el CSV de resultados y la página pública no incluyen correos, nombres ni comprobantes.
 - Al registrarse, el votante autoriza el tratamiento de datos (Ley 1581 de 2012).
 
-**Despliegue.** Guía paso a paso para publicar la aplicación en **Vercel** con la base MySQL en **TiDB Cloud** (compatible con MySQL, conexión cifrada) y HTTPS: [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md). En el servidor los usuarios de prueba se crean con claves propias (`DEMO_CLAVE_*`), nunca con las del README, y el bloqueo de intentos se guarda en la base (`DJANGO_CACHE_DB=1`).
+**Claves de los usuarios de prueba en un servidor.** Si se publica la aplicación, los usuarios de prueba se crean con claves propias definidas en las variables `DEMO_CLAVE_ADMIN`, `DEMO_CLAVE_JURADO` y `DEMO_CLAVE_VOTANTE`, nunca con las del README, que son públicas.
 
 ## 7. Pruebas automáticas
 
@@ -345,5 +345,5 @@ Cuando la Fundación apruebe una regla, se cambia a `APROBADA` en `votaciones/re
 - Recuperación de contraseña por correo (requiere un servidor SMTP).
 - Verificación de la cuenta por código (P-02) y CAPTCHA contra bots (R-01).
 - Exportación a PDF y certificación de resultados (P-12).
-- Publicar la aplicación siguiendo [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md) (configuración de producción ya lista).
+- Publicar la aplicación en un servidor público con MySQL y HTTPS (la configuración de seguridad para producción ya está lista: `DJANGO_DEBUG=0`, `DJANGO_HTTPS=1`).
 - Definir con la Fundación el criterio de desempate (RN-12); hoy el sistema detecta el empate y no elige ganador.
