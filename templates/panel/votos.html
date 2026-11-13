@@ -2,7 +2,7 @@
 {% block titulo %}Votos registrados{% endblock %}
 {% block panel %}
 <div><span class="eyebrow">{{ edicion.nombre }} · Entrega 3</span><h1 class="h3 fw-bold m-0">Votos registrados</h1>
-  <p class="text-secondary m-0">Consulta de los votos guardados en MySQL (tabla <code>votaciones_voto</code>). Un voto por usuario, categoría y edición {% regla "RN-06" %}. Los votos no se pueden editar ni borrar (RN-05).</p></div>
+  <p class="text-secondary m-0">Consulta de los votos guardados en MySQL (tabla <code>votaciones_voto</code>). Un voto por usuario, categoría y edición {% regla "RN-06" %}. Los votos no se pueden editar ni borrar (RN-05). Por protección de datos personales (Ley 1581 de 2012) el correo se muestra parcialmente y cada consulta queda registrada en la auditoría.</p></div>
 
 <div class="row g-2">
   {% for c in por_categoria %}
@@ -27,7 +27,7 @@
 <div class="tabla-caja table-responsive"><table class="table tabla">
   <thead><tr><th>Comprobante</th><th>Usuario</th><th>Categoría</th><th>Votación</th><th>Opción</th><th>Fecha</th></tr></thead>
   <tbody>{% for v in votos %}
-    <tr><td><code>{{ v.codigo }}</code></td><td>{{ v.usuario.email }}</td><td>{{ v.categoria.nombre }}</td><td>{{ v.votacion.nombre }}</td><td>{{ v.opcion.nombre }}</td><td class="text-nowrap">{{ v.fecha|date:"Y-m-d H:i" }}</td></tr>
+    <tr><td><code>{{ v.codigo }}</code></td><td>{{ v.usuario.email|ocultar_correo }}</td><td>{{ v.categoria.nombre }}</td><td>{{ v.votacion.nombre }}</td><td>{{ v.opcion.nombre }}</td><td class="text-nowrap">{{ v.fecha|date:"Y-m-d H:i" }}</td></tr>
   {% empty %}<tr><td colspan="6" class="text-secondary">No hay votos con esos filtros.</td></tr>{% endfor %}</tbody>
 </table></div>
 <p class="nota m-0">Para comprobarlo en MySQL: <code>SELECT codigo, usuario_id, categoria_id, votacion_id, opcion_id, fecha FROM votaciones_voto;</code></p>

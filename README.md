@@ -185,19 +185,52 @@ py manage.py probar_concurrencia --hilos 5  # 5 solicitudes simultáneas
 
 Crea un usuario temporal, envía varios votos **al mismo tiempo** en la misma categoría (cada uno con su propia conexión a MySQL) y muestra que solo quedó uno. Al final borra el usuario temporal. Código: [`votaciones/concurrencia.py`](votaciones/concurrencia.py).
 
+### Entrega final (Eje 4)
+
+**Resultados y ganadores.** En **Panel → Resultados** y en la página pública **Resultados** (`/resultados/`) el sistema declara el ganador según el modo de cada votación:
+
+| Modo | Cómo se define el ganador |
+|---|---|
+| Solo público | La opción con más votos |
+| Solo jurado | La opción con más puntaje del jurado |
+| Combinado | Mayor resultado final = peso del jurado × % de puntajes + peso del público × % de votos |
+| Independiente | Dos ganadores: el fallo del jurado (oficial) y el reconocimiento del público |
+
+Mientras la votación está abierta dice **«Va ganando»**; al cerrar, **«Ganador»**. Si hay empate lo informa y **no lo resuelve**, porque el criterio de desempate está pendiente de validación (RN-12). La página pública solo muestra las votaciones cuya visibilidad lo permite (en tiempo real o al cierre) y nunca muestra datos de los votantes. Código: `Votacion.ganadores()` en [`votaciones/models.py`](votaciones/models.py).
+
+**Prueba de carga** (con MySQL):
+
+```bash
+py manage.py prueba_carga                             # 200 votantes, 25 en paralelo
+py manage.py prueba_carga --usuarios 1000 --hilos 50
+```
+
+Crea votantes temporales; cada uno envía **dos votos casi a la vez** en la misma categoría. Mide cuántos se aceptan y rechazan, el tiempo por solicitud (promedio, mediana, p95 y máximo) y comprueba que cada votante quedó con un solo voto y que no hay duplicados. Al final borra los votantes temporales. Resultado de referencia en un PC con MySQL/MariaDB: **1000 votantes, 2000 solicitudes en 17 s (≈115 por segundo), p95 de 660 ms, 1000 votos aceptados, 1000 rechazados y 0 duplicados.**
+
+**Datos personales y permisos de consulta.**
+- Solo el administrador consulta votos, resultados, usuarios y auditoría; el votante y el jurado son devueltos.
+- En **Votos registrados** el correo se muestra parcialmente (`vo*****@festival.test`) y **cada consulta queda en la auditoría** con los filtros usados.
+- En la auditoría la IP se muestra recortada (`190.25.*.*`).
+- Un votante solo puede ver sus propios comprobantes.
+- La API, el CSV de resultados y la página pública no incluyen correos, nombres ni comprobantes.
+- Al registrarse, el votante autoriza el tratamiento de datos (Ley 1581 de 2012).
+
+**Despliegue.** Guía paso a paso para publicar la aplicación en **Vercel** con la base MySQL en **TiDB Cloud** (compatible con MySQL, conexión cifrada) y HTTPS: [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md). En el servidor los usuarios de prueba se crean con claves propias (`DEMO_CLAVE_*`), nunca con las del README, y el bloqueo de intentos se guarda en la base (`DJANGO_CACHE_DB=1`).
+
 ## 7. Pruebas automáticas
 
 ```bash
 py manage.py test
 ```
 
-Son **108 pruebas** (la gestión de usuarios desde el panel está en `votaciones/tests/test_usuarios_panel.py` y los permisos por rol en `votaciones/tests/test_roles.py`; las de la Entrega 3 están en `votaciones/tests/test_entrega3.py`, una clase por caso CP-01 a CP-10, más la gestión desde el panel, y las de seguridad en `votaciones/tests/test_seguridad.py`). Deben terminar en `OK`. Las pruebas de hilos simultáneos reales (CP-09) solo corren con MySQL.
+Son **126 pruebas** (resultados y ganadores en `test_resultados.py`, datos personales en `test_datos_personales.py`, carga en `test_carga.py`, gestión de usuarios en `test_usuarios_panel.py` y permisos por rol en `test_roles.py`, todas en `votaciones/tests/`; las de la Entrega 3 están en `votaciones/tests/test_entrega3.py`, una clase por caso CP-01 a CP-10, más la gestión desde el panel, y las de seguridad en `votaciones/tests/test_seguridad.py`). Deben terminar en `OK`. Las pruebas de hilos simultáneos reales (CP-09) solo corren con MySQL.
 
 | Grupo | Qué prueban |
 |---|---|
 | **Entrega 3 (CP-01 a CP-10)** | Voto válido, segundo voto en la misma categoría (otra opción u otra votación), voto en otra categoría, sin sesión, sin CSRF, categoría no habilitada, opción de otra categoría, categorías votadas, consulta del administrador, solicitudes simultáneas y API GET |
 | Seguridad | Token CSRF en los formularios y página 403, límite de intentos de inicio de sesión, cabeceras de seguridad, cookies protegidas y contraseñas con hash |
 | Gestión desde el panel | Eliminar ediciones, categorías y votaciones con sus reglas, solo por POST y solo administradores |
+| **Entrega final (Eje 4)** | Ganadores por modo, empates, resultados públicos según visibilidad, correos ocultos y auditoría de consultas, permisos de consulta, prueba de carga con 40 votantes simultáneos (MySQL), gestión de usuarios y permisos por rol |
 | Voto del público | Votación cerrada, próxima o en borrador, opción inactiva, restricción única en la base de datos |
 | Panel | Permisos, publicar solo con 2 opciones o más, exportación CSV |
 | Cuentas | Registro, validaciones e inicio de sesión |
@@ -208,7 +241,7 @@ Son **108 pruebas** (la gestión de usuarios desde el panel está en `votaciones
 
 ### Evidencia reproducible en GitHub
 
-Cada vez que alguien sube un commit, GitHub corre las pruebas solo, contra un **MySQL 8 real** ([`.github/workflows/pruebas.yml`](.github/workflows/pruebas.yml)): instala las librerías, crea las tablas, carga los datos de prueba y corre las 108 pruebas, incluidas las de solicitudes simultáneas. El resultado se ve en la pestaña **Actions** del repositorio y en la insignia de arriba de este README.
+Cada vez que alguien sube un commit, GitHub corre las pruebas solo, contra un **MySQL 8 real** ([`.github/workflows/pruebas.yml`](.github/workflows/pruebas.yml)): instala las librerías, crea las tablas, carga los datos de prueba y corre las 126 pruebas, incluidas las de solicitudes simultáneas. El resultado se ve en la pestaña **Actions** del repositorio y en la insignia de arriba de este README.
 
 ## 8. Modo rápido sin MySQL (opcional)
 
@@ -256,6 +289,7 @@ festival-votaciones/
 | Panel | `/panel/` |
 | Ediciones, categorías, votaciones y opciones | `/panel/ediciones/` · `/panel/categorias/` · `/panel/votaciones/` · `/panel/votaciones/<id>/opciones/` |
 | Jurados / Usuarios / Votos registrados / Resultados / Auditoría | `/panel/jurados/` · `/panel/usuarios/` · `/panel/votos/` · `/panel/resultados/` · `/panel/auditoria/` |
+| Resultados públicos | `/resultados/` |
 | API GET de categorías | `/api/categorias/` |
 | Panel del jurado / Calificar | `/jurado/` · `/jurado/votaciones/<id>/` |
 
@@ -301,6 +335,8 @@ Cuando la Fundación apruebe una regla, se cambia a `APROBADA` en `votaciones/re
 | `No module named 'django'` | Falta activar el entorno virtual (paso 2) |
 | «Demasiados intentos fallidos» al iniciar sesión | Espere 15 minutos o reinicie el servidor (el contador está en memoria) |
 | `probar_concurrencia` dice `database is locked` | Está usando SQLite (modo rápido). La prueba de concurrencia es para MySQL |
+| `prueba_carga` dice que necesita MySQL | Igual: la prueba de carga solo corre con MySQL |
+| `cargar_demo` dice «Ya hay datos de la edición 2027» | Use `py manage.py cargar_demo --reiniciar` (borra votos y usuarios creados y recarga con fechas nuevas) |
 | Se ve sin estilos | Abra `http://localhost:8888`, no el archivo HTML directamente |
 
 ## 12. Pendiente para las próximas entregas
@@ -309,4 +345,5 @@ Cuando la Fundación apruebe una regla, se cambia a `APROBADA` en `votaciones/re
 - Recuperación de contraseña por correo (requiere un servidor SMTP).
 - Verificación de la cuenta por código (P-02) y CAPTCHA contra bots (R-01).
 - Exportación a PDF y certificación de resultados (P-12).
-- Despliegue con HTTPS y `DJANGO_DEBUG=0`.
+- Publicar la aplicación siguiendo [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md) (configuración de producción ya lista).
+- Definir con la Fundación el criterio de desempate (RN-12); hoy el sistema detecta el empate y no elige ganador.

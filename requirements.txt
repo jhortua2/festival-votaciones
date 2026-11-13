@@ -2,3 +2,6 @@ Django>=5.2,<5.3
 PyMySQL>=1.1
 Pillow>=10.0
 cryptography>=42  # la necesita PyMySQL para el método de acceso por defecto de MySQL 8
+whitenoise>=6.6        # archivos estáticos en el servidor público
+gunicorn>=22.0         # servidor web de producción (Linux; en Windows se sigue usando runserver)
+certifi>=2024.2        # certificados para conectarse cifrado a MySQL en la nube

@@ -74,7 +74,22 @@ def votacion_detalle(request, pk):
     }
     if votacion.resultados_publicos():
         contexto["resultados"], contexto["total"] = votacion.conteo()
+        contexto["ganadores"] = votacion.ganadores()
     return render(request, "votaciones/detalle.html", contexto)
+
+
+def resultados(request):
+    """Publicación de resultados (Eje 4). Solo aparecen las votaciones cuya visibilidad lo permite (RN-10):
+    «públicos en tiempo real» desde que abren, «públicos al cierre» cuando cierran. Las de «solo
+    administradores» nunca se muestran aquí. No se expone ningún dato de los votantes."""
+    publicadas = []
+    for v in _votaciones_publicas().order_by("categoria__orden", "apertura"):
+        if v.resultados_publicos():
+            v.filas, v.total = v.resultados_ponderados()
+            v.g = v.ganadores(v.filas)
+            v.ranking = v.ranking_publico(v.filas) if v.es_independiente else None
+            publicadas.append(v)
+    return render(request, "votaciones/resultados.html", {"votaciones": publicadas, "edicion": Edicion.actual()})
 
 
 def votacion_opciones(request, pk):

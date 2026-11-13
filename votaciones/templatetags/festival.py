@@ -48,3 +48,28 @@ def regla(*codigos):
         '<span class="origen origen-{}" title="{}">{} · {}</span>',
         estado, DESCRIPCION[estado], ETIQUETA[estado], " · ".join(codigos),
     )
+
+
+@register.filter
+def ocultar_correo(correo):
+    """Protección de datos (Eje 4): «votante@festival.test» → «vo*****@festival.test».
+
+    En la consulta administrativa de votos no se muestra el correo completo de quien votó:
+    basta para reconocer la cuenta sin exponer el dato personal en pantalla.
+    """
+    if not correo or "@" not in correo:
+        return correo or ""
+    usuario, dominio = correo.split("@", 1)
+    visible = usuario[:2] if len(usuario) > 2 else usuario[:1]
+    return f"{visible}{'*' * max(len(usuario) - len(visible), 3)}@{dominio}"
+
+
+@register.filter
+def ocultar_ip(ip):
+    """«190.25.33.14» → «190.25.*.*». La IP completa queda en la base solo para seguridad."""
+    if not ip:
+        return ""
+    if ":" in ip:                      # IPv6: solo los dos primeros bloques
+        return ":".join(ip.split(":")[:2]) + ":*"
+    partes = ip.split(".")
+    return ".".join(partes[:2] + ["*", "*"]) if len(partes) == 4 else ip

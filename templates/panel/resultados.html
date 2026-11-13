@@ -17,6 +17,7 @@
     <div class="col-6 col-lg-3"><div class="kpi"><small>Votos rechazados</small><b>{{ rechazados|intcomma }}</b></div></div>
     <div class="col-6 col-lg-3"><div class="kpi"><small>Estado</small><b style="font-size:1.25rem">{{ votacion.estado_etiqueta }}</b></div></div>
   </div>
+  {% include "includes/ganador.html" with g=ganadores %}
   <section class="panel-caja d-flex flex-column gap-2">
     <div class="d-flex justify-content-between flex-wrap gap-2"><h2 class="h6 fw-bold m-0">Cómo se calcula</h2><span class="nota">{{ votacion.modalidad }} {% regla "RN-11" "P-06" %}</span></div>
     {% if votacion.es_combinado %}
@@ -36,7 +37,7 @@
     <section class="panel-caja d-flex flex-column gap-3">
       <h2 class="h6 fw-bold m-0">Fallo del jurado <span class="nota">(oficial)</span></h2>
       {% for o in filas %}
-        <div><div class="d-flex justify-content-between gap-2"><b>{% if forloop.first and o.n_calif %}🏆 {% endif %}{{ o.nombre }}</b><span class="text-body fw-bold">{% if o.promedio is not None %}{{ o.promedio|floatformat:1 }}/{{ votacion.escala_maxima }}{% else %}—{% endif %}</span></div>
+        <div><div class="d-flex justify-content-between gap-2"><b>{% if o in ganadores.oficial.opciones %}🏆 {% endif %}{{ o.nombre }}</b><span class="text-body fw-bold">{% if o.promedio is not None %}{{ o.promedio|floatformat:1 }}/{{ votacion.escala_maxima }}{% else %}—{% endif %}</span></div>
         <div class="barra apilada mt-1"><div class="j" style="width:{{ o.pct_jurado|stringformat:'.2f' }}%"></div></div>
         <div class="nota mt-1">{{ o.pct_jurado|floatformat:1 }} % de los puntajes · {{ o.n_calif }} {% if o.n_calif == 1 %}calificación{% else %}calificaciones{% endif %}</div></div>
       {% empty %}<p class="text-secondary m-0">Esta votación no tiene opciones.</p>{% endfor %}
@@ -45,7 +46,7 @@
     <section class="panel-caja d-flex flex-column gap-3">
       <h2 class="h6 fw-bold m-0">Reconocimiento del público</h2>
       {% for o in ranking_publico %}
-        <div><div class="d-flex justify-content-between gap-2"><b>{% if forloop.first and o.n_votos %}⭐ {% endif %}{{ o.nombre }}</b><span class="text-body fw-bold">{{ o.pct_publico|floatformat:1 }} %</span></div>
+        <div><div class="d-flex justify-content-between gap-2"><b>{% if o in ganadores.publico.opciones %}⭐ {% endif %}{{ o.nombre }}</b><span class="text-body fw-bold">{{ o.pct_publico|floatformat:1 }} %</span></div>
         <div class="barra apilada mt-1"><div class="p" style="width:{{ o.pct_publico|stringformat:'.2f' }}%"></div></div>
         <div class="nota mt-1">{{ o.n_votos|intcomma }} voto{{ o.n_votos|pluralize }}</div></div>
       {% endfor %}
@@ -57,7 +58,7 @@
       <div class="leyenda-peso">{% if votacion.tiene_jurado %}<span><i style="background:var(--sol)"></i>Jurado</span>{% endif %}{% if votacion.tiene_publico %}<span><i style="background:var(--rio)"></i>Público</span>{% endif %}</div></div>
     {% for o in filas %}
       <div>
-        <div class="d-flex justify-content-between gap-2 flex-wrap"><b>{% if forloop.first and o.final %}🏆 {% endif %}{{ o.nombre }}{% if not o.activa %} <span class="pill pill-inactiva">Inactiva</span>{% endif %}</b><span class="text-body fw-bold">{{ o.final|floatformat:1 }} %</span></div>
+        <div class="d-flex justify-content-between gap-2 flex-wrap"><b>{% if o in ganadores.oficial.opciones %}🏆 {% endif %}{{ o.nombre }}{% if not o.activa %} <span class="pill pill-inactiva">Inactiva</span>{% endif %}</b><span class="text-body fw-bold">{{ o.final|floatformat:1 }} %</span></div>
         <div class="barra apilada mt-1" role="img" aria-label="{{ o.nombre }}: resultado final {{ o.final|floatformat:1 }} por ciento"><div class="j" style="width:{{ o.aporte_jurado|stringformat:'.2f' }}%"></div><div class="p" style="width:{{ o.aporte_publico|stringformat:'.2f' }}%"></div></div>
         <div class="d-flex flex-wrap gap-3 nota mt-1">
           {% if votacion.tiene_jurado %}<span>Jurado: {% if o.promedio is not None %}promedio <b class="text-body">{{ o.promedio|floatformat:1 }}</b>/{{ votacion.escala_maxima }} · {{ o.pct_jurado|floatformat:1 }} %{% else %}sin calificaciones{% endif %}</span>{% endif %}

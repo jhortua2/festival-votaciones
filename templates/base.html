@@ -28,6 +28,7 @@
       <a class="nav-link {% if request.resolver_match.url_name == 'inicio' and request.resolver_match.app_name == 'votaciones' %}active{% endif %}" href="{% url 'votaciones:inicio' %}">Inicio</a>
       <a class="nav-link {% if request.resolver_match.url_name == 'categorias' %}active{% endif %}" href="{% url 'votaciones:categorias' %}">Categorías</a>
       <a class="nav-link {% if request.resolver_match.url_name == 'ediciones' %}active{% endif %}" href="{% url 'votaciones:ediciones' %}">Ediciones</a>
+      <a class="nav-link {% if request.resolver_match.url_name == 'resultados' and request.resolver_match.app_name == 'votaciones' %}active{% endif %}" href="{% url 'votaciones:resultados' %}">Resultados</a>
       {% if user.is_authenticated %}<a class="nav-link" href="{% url 'cuentas:mis_votos' %}">Mis votos</a>{% endif %}
       {% if user.is_authenticated and user.es_jurado %}<a class="nav-link {% if request.resolver_match.app_name == 'jurado' %}active{% endif %}" href="{% url 'jurado:inicio' %}">Jurado</a>{% endif %}
       {% if user.is_authenticated and user.es_admin %}<a class="nav-link" href="{% url 'panel:panel' %}">Administración</a>{% endif %}

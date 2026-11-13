@@ -15,9 +15,14 @@ from auditoria.models import Registro
 from cuentas.models import Usuario
 from votaciones.models import Calificacion, Categoria, Edicion, Opcion, Votacion, Voto
 
-ADMIN = ("admin@festival.test", "Festival2027!")
-VOTANTE = ("votante@festival.test", "Vallenato2027!")
-JURADO = ("jurado@festival.test", "Jurado2027!")
+import os
+
+# En el PC se usan las claves de prueba del README. En un servidor público se ponen claves propias
+# con las variables DEMO_CLAVE_ADMIN, DEMO_CLAVE_VOTANTE y DEMO_CLAVE_JURADO (no se escriben en ningún archivo).
+ADMIN = ("admin@festival.test", os.environ.get("DEMO_CLAVE_ADMIN") or "Festival2027!")
+VOTANTE = ("votante@festival.test", os.environ.get("DEMO_CLAVE_VOTANTE") or "Vallenato2027!")
+JURADO = ("jurado@festival.test", os.environ.get("DEMO_CLAVE_JURADO") or "Jurado2027!")
+_CLAVES_PROPIAS = all(os.environ.get(v) for v in ("DEMO_CLAVE_ADMIN", "DEMO_CLAVE_VOTANTE", "DEMO_CLAVE_JURADO"))
 # Datos de prueba: la base queda solo con tres usuarios, uno por rol.
 
 
@@ -138,6 +143,10 @@ class Command(BaseCommand):
 
     def _credenciales(self):
         self.stdout.write("")
+        if _CLAVES_PROPIAS:
+            # En el servidor nunca se imprimen las claves (quedarían en los registros del servicio)
+            self.stdout.write("  Usuarios de prueba creados con las claves de las variables DEMO_CLAVE_*.")
+            return
         self.stdout.write("  Usuarios de prueba (no son credenciales reales):")
         self.stdout.write("  Administrador:  " + ADMIN[0] + "  /  " + ADMIN[1])
         self.stdout.write("  Votante:        " + VOTANTE[0] + "  /  " + VOTANTE[1])

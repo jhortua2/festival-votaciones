@@ -227,3 +227,7 @@ main { flex: 1; }
 .log time { font-family: var(--f-mono); font-size: .72rem; color: var(--texto-2); white-space: nowrap; }
 
 footer.pie { border-top: 1px solid var(--linea); color: var(--texto-2); font-size: .8rem; }
+
+/* Ganador de una votación (Eje 4) */
+.ganador-caja { background: var(--monte-2); border: 1px solid var(--linea); border-left: 4px solid var(--sol); border-radius: 12px; padding: .9rem 1rem; }
+.ganador { display: flex; flex-direction: column; gap: .15rem; min-width: 220px; flex: 1; }

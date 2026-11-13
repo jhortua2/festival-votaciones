@@ -427,6 +427,7 @@ def resultados(request, pk=None):
     if v:
         contexto["filas"], contexto["total"] = v.resultados_ponderados()
         contexto["ranking_publico"] = v.ranking_publico(contexto["filas"])
+        contexto["ganadores"] = v.ganadores(contexto["filas"])
         contexto["n_calif"] = Calificacion.objects.filter(votacion=v).values("jurado").distinct().count()
         contexto["n_jurados"] = v.jurados.count()
         contexto["faltan"] = max(contexto["n_jurados"] - contexto["n_calif"], 0)
@@ -471,6 +472,9 @@ def votos(request):
         lista = lista.filter(votacion_id=vot_id)
     if buscar:
         lista = lista.filter(Q(codigo__icontains=buscar) | Q(usuario__email__icontains=buscar))
+    # Protección de datos: cada consulta de votos queda en la auditoría, con los filtros usados.
+    filtros = ", ".join(f"{k}={v}" for k, v in (("categoria", cat_id), ("votacion", vot_id), ("busqueda", buscar)) if v)
+    registrar(request, "consulta_votos", filtros or "sin filtros")
     por_categoria = (Voto.objects.filter(edicion=edicion).values("categoria__nombre")
                      .annotate(n=Count("id"), votantes=Count("usuario", distinct=True)).order_by("categoria__nombre"))
     return render(request, "panel/votos.html", {

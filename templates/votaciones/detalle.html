@@ -47,6 +47,7 @@
 
   {% if resultados %}
   <section class="panel-caja d-flex flex-column gap-3">
+    {% include "includes/ganador.html" with g=ganadores %}
     <h2 class="h6 fw-bold m-0">Votos del público {% if votacion.estado == "abierta" %}(parciales){% endif %} · {{ total|intcomma }} votos</h2>
     {% if votacion.es_combinado %}<p class="nota m-0">El resultado final suma también la calificación del jurado ({{ votacion.peso_jurado }} %, propuesta pendiente de validación).</p>
     {% elif votacion.es_independiente %}<p class="nota m-0">Este es el reconocimiento del público. El fallo oficial lo da el jurado por separado.</p>{% endif %}

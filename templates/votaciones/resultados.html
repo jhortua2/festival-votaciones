@@ -1,0 +1,38 @@
+{% extends "base.html" %}{% load festival humanize %}
+{% block titulo %}Resultados{% endblock %}
+{% block contenido %}
+<div class="container-lg py-4 d-flex flex-column gap-3">
+  <div><span class="eyebrow">{{ edicion.nombre|default:"Festival" }}</span><h1 class="h-display m-0" style="font-size:2rem">Resultados</h1>
+    <p class="text-secondary m-0">Se publican según la visibilidad de cada votación {% regla "RN-10" "P-05" %}: algunas en tiempo real y otras solo al cierre. No se muestra ningún dato de los votantes.</p></div>
+
+  {% for v in votaciones %}
+  <section class="panel-caja d-flex flex-column gap-3">
+    <div class="d-flex justify-content-between flex-wrap gap-2 align-items-start">
+      <div><span class="nota">{{ v.categoria.nombre }}</span><h2 class="h5 fw-bold m-0"><a href="{% url 'votaciones:detalle' v.pk %}" class="text-reset text-decoration-none">{{ v.nombre }}</a></h2>
+        <span class="nota">{{ v.modalidad }} · {{ v.total|intcomma }} voto{{ v.total|pluralize }} del público</span></div>
+      <span class="pill {% if v.estado == 'cerrada' %}pill-cerrada{% else %}pill-abierta{% endif %}">{{ v.estado_etiqueta }}</span>
+    </div>
+
+    {% include "includes/ganador.html" with g=v.g votacion=v %}
+
+    {% if v.es_independiente %}
+      <div class="dos-rankings">
+        <div class="d-flex flex-column gap-2"><b>Fallo del jurado</b>
+          {% for o in v.filas %}<div><div class="d-flex justify-content-between small"><span>{% if o in v.g.oficial.opciones %}🏆 {% endif %}{{ o.nombre }}</span><b>{{ o.pct_jurado|floatformat:1 }} %</b></div>
+            <div class="barra apilada mt-1"><div class="j" style="width:{{ o.pct_jurado|stringformat:'.2f' }}%"></div></div></div>{% endfor %}</div>
+        <div class="d-flex flex-column gap-2"><b>Votos del público</b>
+          {% for o in v.ranking %}<div><div class="d-flex justify-content-between small"><span>{% if o in v.g.publico.opciones %}⭐ {% endif %}{{ o.nombre }}</span><b>{{ o.pct_publico|floatformat:1 }} %</b></div>
+            <div class="barra apilada mt-1"><div class="p" style="width:{{ o.pct_publico|stringformat:'.2f' }}%"></div></div></div>{% endfor %}</div>
+      </div>
+    {% else %}
+      {% for o in v.filas %}
+      <div><div class="d-flex justify-content-between small"><span>{% if o in v.g.oficial.opciones %}🏆 {% endif %}{{ o.nombre }}</span><b>{{ o.final|floatformat:1 }} %</b></div>
+        <div class="barra apilada mt-1"><div class="j" style="width:{{ o.aporte_jurado|stringformat:'.2f' }}%"></div><div class="p" style="width:{{ o.aporte_publico|stringformat:'.2f' }}%"></div></div></div>
+      {% endfor %}
+    {% endif %}
+  </section>
+  {% empty %}
+  <div class="ejemplo">Todavía no hay resultados publicados. Cada votación los muestra según su visibilidad: en tiempo real o cuando cierre.</div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -254,6 +254,35 @@ class Votacion(models.Model):
             opciones.sort(key=lambda o: (-o.final, o.orden))
         return opciones, total_votos
 
+    def ganadores(self, filas=None):
+        """Quién gana según el modo de la votación (RN-11).
+
+        Devuelve {"oficial": {...}, "publico": {...} o None, "definitivo": bool}. Cada parte trae
+        `opciones` (las que van primero) y `empate` (True si hay más de una). El sistema detecta el
+        empate pero no lo resuelve: el criterio de desempate está pendiente de validación (RN-12).
+        Mientras la votación no cierre, el ganador es provisional ("va ganando").
+        """
+        filas = filas if filas is not None else self.resultados_ponderados()[0]
+
+        def lider(clave):
+            con_datos = [o for o in filas if clave(o) > 0]
+            if not con_datos:
+                return {"opciones": [], "empate": False}
+            mejor = max(clave(o) for o in con_datos)
+            primeros = [o for o in con_datos if clave(o) == mejor]
+            return {"opciones": primeros, "empate": len(primeros) > 1}
+
+        if self.es_independiente:
+            oficial = lider(lambda o: o.suma_puntaje)           # fallo del jurado
+            publico = lider(lambda o: o.n_votos)                # reconocimiento del público
+        elif self.modo == self.Modo.JURADO:
+            oficial, publico = lider(lambda o: o.suma_puntaje), None
+        elif self.modo == self.Modo.PUBLICO:
+            oficial, publico = lider(lambda o: o.n_votos), None
+        else:                                                   # combinado
+            oficial, publico = lider(lambda o: round(o.final or 0, 6)), None
+        return {"oficial": oficial, "publico": publico, "definitivo": self.estado == self.Estado.CERRADA}
+
     def ranking_publico(self, opciones=None):
         """Orden por votos del público (para el modo independiente)."""
         opciones = opciones if opciones is not None else self.resultados_ponderados()[0]

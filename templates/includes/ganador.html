@@ -1,0 +1,25 @@
+{# Ganador según el modo de la votación (RN-11). Recibe `g` = votacion.ganadores() y `votacion`. #}
+{% with of=g.oficial pu=g.publico %}
+<div class="ganador-caja d-flex flex-column gap-2">
+  <div class="d-flex flex-wrap gap-3">
+    <div class="ganador">
+      <span class="nota">{% if pu %}Fallo del jurado (oficial){% else %}Resultado{% endif %}</span>
+      {% if of.opciones %}
+        <b class="fs-5">{% if of.empate %}Empate{% elif g.definitivo %}🏆 Ganador{% else %}Va ganando{% endif %}:
+          {% for o in of.opciones %}{{ o.nombre }}{% if not forloop.last %} · {% endif %}{% endfor %}</b>
+      {% else %}<b class="fs-6 text-secondary">Sin {% if pu or votacion.modo == "jurado" %}calificaciones{% else %}votos{% endif %} todavía</b>{% endif %}
+    </div>
+    {% if pu %}
+    <div class="ganador">
+      <span class="nota">Reconocimiento del público</span>
+      {% if pu.opciones %}
+        <b class="fs-5">{% if pu.empate %}Empate{% elif g.definitivo %}⭐ Ganador{% else %}Va ganando{% endif %}:
+          {% for o in pu.opciones %}{{ o.nombre }}{% if not forloop.last %} · {% endif %}{% endfor %}</b>
+      {% else %}<b class="fs-6 text-secondary">Sin votos todavía</b>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% if not g.definitivo and of.opciones %}<p class="nota m-0">Resultado provisional: la votación sigue {{ votacion.estado_etiqueta|lower }}. El ganador se confirma al cierre.</p>{% endif %}
+  {% if of.empate or pu.empate %}<div class="aviso-propuesta"><b>Empate.</b> El criterio de desempate está pendiente de validación con la Fundación (RN-12); el sistema no elige un ganador por su cuenta.</div>{% endif %}
+</div>
+{% endwith %}
