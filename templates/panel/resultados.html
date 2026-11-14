@@ -4,9 +4,12 @@
 <div class="d-flex flex-wrap justify-content-between align-items-end gap-2">
   <div><span class="eyebrow">Consulta de resultados</span><h1 class="h3 fw-bold m-0">{{ votacion.nombre|default:"Resultados" }}</h1></div>
   {% if todas %}
-  <select class="form-select form-select-sm" style="max-width:320px" aria-label="Elegir votación" onchange="location.href='{% url 'panel:resultados' %}'+this.value+'/'">
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+  <a class="btn btn-sol btn-sm" href="{% url 'panel:resultados_excel' %}">Descargar Excel</a>
+  <select class="form-select form-select-sm" style="max-width:320px;width:auto;padding-right:2.5rem" aria-label="Elegir votación" onchange="location.href='{% url 'panel:resultados' %}'+this.value+'/'">
     {% for t in todas %}<option value="{{ t.pk }}" {% if t.pk == votacion.pk %}selected{% endif %}>{{ t.nombre }}</option>{% endfor %}
   </select>
+  </div>
   {% endif %}
 </div>
 {% if votacion %}

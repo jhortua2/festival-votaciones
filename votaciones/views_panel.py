@@ -16,6 +16,7 @@ from cuentas.models import Usuario
 
 from .forms_panel import (CategoriaForm, EdicionForm, JuradoForm, JustificacionForm, OpcionForm, UsuarioEditarForm,
                           UsuarioForm, VotacionForm)
+from .excel import libro_resultados
 from .models import Calificacion, Categoria, Edicion, Opcion, Votacion, Voto
 
 
@@ -434,6 +435,21 @@ def resultados(request, pk=None):
         contexto["rechazados"] = Registro.objects.filter(accion="voto_rechazado", detalle__startswith=v.nombre).count()
         registrar(request, "resultados_consultados", v.nombre)
     return render(request, "panel/resultados.html", contexto)
+
+
+@solo_admin
+def resultados_excel(request):
+    """Excel con quién gana o va ganando en cada votación publicada de la edición activa."""
+    edicion = _edicion(request)
+    todas = list(Votacion.objects.filter(categoria__edicion=edicion, publicada=True)
+                 .select_related("categoria").order_by("categoria__orden", "categoria__nombre", "pk"))
+    contenido = libro_resultados(edicion, todas)
+    registrar(request, "resultados_exportados", f"{edicion.nombre} (Excel, {len(todas)} votaciones)")
+    respuesta = HttpResponse(contenido,
+                             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    nombre = f"resultados-{edicion.anio}-{timezone.localtime().strftime('%Y%m%d-%H%M')}.xlsx"
+    respuesta["Content-Disposition"] = f'attachment; filename="{nombre}"'
+    return respuesta
 
 
 @solo_admin
