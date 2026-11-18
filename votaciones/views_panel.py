@@ -16,6 +16,7 @@ from cuentas.models import Usuario
 
 from .forms_panel import (CategoriaForm, EdicionForm, JuradoForm, JustificacionForm, OpcionForm, UsuarioEditarForm,
                           UsuarioForm, VotacionForm)
+from .certificado import pdf_resultados
 from .excel import libro_resultados
 from .models import Calificacion, Categoria, Edicion, Opcion, Votacion, Voto
 
@@ -448,6 +449,23 @@ def resultados_excel(request):
     respuesta = HttpResponse(contenido,
                              content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     nombre = f"resultados-{edicion.anio}-{timezone.localtime().strftime('%Y%m%d-%H%M')}.xlsx"
+    respuesta["Content-Disposition"] = f'attachment; filename="{nombre}"'
+    return respuesta
+
+
+@solo_admin
+def resultados_pdf(request):
+    """P-12 · Certificado (o reporte parcial) de resultados en PDF, con huella de verificación."""
+    edicion = _edicion(request)
+    todas = list(Votacion.objects.filter(categoria__edicion=edicion, publicada=True)
+                 .select_related("categoria").order_by("categoria__orden", "categoria__nombre", "pk"))
+    contenido, huella, es_certificado = pdf_resultados(
+        edicion, todas, request.user.get_full_name() or request.user.email)
+    tipo = "certificado" if es_certificado else "reporte parcial"
+    registrar(request, "resultados_exportados", f"{edicion.nombre} (PDF {tipo}, huella {huella})")
+    respuesta = HttpResponse(contenido, content_type="application/pdf")
+    nombre = (f"{'certificado' if es_certificado else 'reporte-parcial'}-resultados-{edicion.anio}-"
+              f"{timezone.localtime().strftime('%Y%m%d-%H%M')}.pdf")
     respuesta["Content-Disposition"] = f'attachment; filename="{nombre}"'
     return respuesta
 

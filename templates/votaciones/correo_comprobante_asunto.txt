@@ -1,0 +1,1 @@
+Tu Voto Vallenato · Comprobante de tu voto {{ voto.codigo }}

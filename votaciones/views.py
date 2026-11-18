@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST
 
 from .models import Categoria, Edicion, Opcion, Votacion, Voto
 from .forms import VotoForm
+from .correos import enviar_comprobante
 from .servicios import VotoRechazado, emitir_voto, voto_en_categoria
 
 
@@ -144,6 +145,7 @@ def confirmar(request, pk):
             voto = emitir_voto(request.user, opcion.pk, request, votacion=votacion)
         except VotoRechazado as e:
             return render(request, "votaciones/rechazo.html", {"votacion": votacion, "motivo": e.motivo, "mensaje": e.mensaje}, status=409)
+        enviar_comprobante(voto, request)           # copia del comprobante al correo (el voto ya está guardado)
         return redirect("votaciones:comprobante", codigo=voto.codigo)
 
     return render(request, "votaciones/confirmacion.html", {"votacion": votacion, "opcion": opcion, "form": form})

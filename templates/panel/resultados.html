@@ -6,6 +6,7 @@
   {% if todas %}
   <div class="d-flex flex-wrap gap-2 align-items-center">
   <a class="btn btn-sol btn-sm" href="{% url 'panel:resultados_excel' %}">Descargar Excel</a>
+  <a class="btn btn-linea btn-sm" href="{% url 'panel:resultados_pdf' %}" title="Certificado si todas las votaciones están cerradas; si no, reporte parcial">Certificado PDF</a>
   <select class="form-select form-select-sm" style="max-width:320px;width:auto;padding-right:2.5rem" aria-label="Elegir votación" onchange="location.href='{% url 'panel:resultados' %}'+this.value+'/'">
     {% for t in todas %}<option value="{{ t.pk }}" {% if t.pk == votacion.pk %}selected{% endif %}>{{ t.nombre }}</option>{% endfor %}
   </select>
@@ -73,7 +74,7 @@
   </section>
   {% endif %}
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-    <p class="nota m-0">Visibilidad pública: <b>{{ votacion.get_visibilidad_display }}</b> {% regla "RN-10" "P-05" %} · Certificación antes de publicar {% regla "P-12" %}</p>
+    <p class="nota m-0">Visibilidad pública: <b>{{ votacion.get_visibilidad_display }}</b> {% regla "RN-10" "P-05" %} · Certificado en PDF con huella de verificación {% regla "P-12" %}</p>
     <a class="btn btn-linea btn-sm" href="{% url 'panel:resultados_csv' votacion.pk %}">Exportar CSV</a>
   </div>
 {% else %}

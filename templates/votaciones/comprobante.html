@@ -14,7 +14,7 @@
         <div><span>Votación</span><b>{{ voto.votacion.nombre }}</b></div>
         <div><span>Fecha y hora</span><b>{{ voto.fecha|date:"j M Y · g:i a" }}</b></div>
       </div>
-      <p class="nota m-0">Guarda tu código por si necesitas hacer un reclamo (RF-10).</p>
+      <p class="nota m-0">Guarda tu código por si necesitas hacer un reclamo (RF-10). También te enviamos una copia a tu correo <b>{{ voto.usuario.email }}</b>.</p>
     </div>
     <div class="d-grid gap-2 px-4 pb-4">
       <a class="btn btn-sol" href="{% url 'votaciones:categorias' %}">Ver otras votaciones</a>

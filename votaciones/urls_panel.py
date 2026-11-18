@@ -30,6 +30,7 @@ urlpatterns = [
     path("usuarios/<int:pk>/estado/", v.usuario_estado, name="usuario_estado"),
     path("resultados/", v.resultados, name="resultados"),
     path("resultados/excel/", v.resultados_excel, name="resultados_excel"),
+    path("resultados/pdf/", v.resultados_pdf, name="resultados_pdf"),
     path("resultados/<int:pk>/", v.resultados, name="resultados_votacion"),
     path("resultados/<int:pk>/csv/", v.resultados_csv, name="resultados_csv"),
     path("votos/", v.votos, name="votos"),

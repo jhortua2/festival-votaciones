@@ -1,0 +1,16 @@
+Hola{% if usuario.first_name %} {{ usuario.first_name }}{% endif %},
+
+¡Tu voto quedó registrado! Este es tu comprobante:
+
+  Comprobante:  {{ voto.codigo }}
+  Categoría:    {{ voto.categoria.nombre }}
+  Votación:     {{ voto.votacion.nombre }}
+  Tu voto:      {{ voto.opcion.nombre }}
+  Fecha y hora: {{ fecha|date:"j M Y · g:i a" }}
+
+Guarda este correo por si necesitas hacer un reclamo.
+Puedes ver todos tus votos en: {{ enlace }}
+
+Si no fuiste tú, escríbele al administrador del sistema.
+
+Tu Voto Vallenato · Festival de la Leyenda Vallenata

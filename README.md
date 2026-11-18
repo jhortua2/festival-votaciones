@@ -212,8 +212,32 @@ Crea votantes temporales; cada uno envía **dos votos casi a la vez** en la mism
 - En **Votos registrados** el correo se muestra parcialmente (`vo*****@festival.test`) y **cada consulta queda en la auditoría** con los filtros usados.
 - En la auditoría la IP se muestra recortada (`190.25.*.*`).
 - Un votante solo puede ver sus propios comprobantes.
-- La API, el CSV de resultados y la página pública no incluyen correos, nombres ni comprobantes.
+- La API, el CSV, el Excel y el certificado PDF de resultados y la página pública no incluyen correos, nombres ni comprobantes.
 - Al registrarse, el votante autoriza el tratamiento de datos (Ley 1581 de 2012).
+
+**Descargar resultados en Excel.** En **Panel → Resultados → Descargar Excel** (solo administradores) se baja un `.xlsx` con una hoja **Resumen** (quién gana o va ganando en cada votación publicada de la edición, con colores: verde = ganador definitivo, amarillo = va ganando) y una hoja de detalle por votación con barras de porcentaje. Cada descarga queda en la auditoría. Código: [`votaciones/excel.py`](votaciones/excel.py).
+
+**Certificado de resultados en PDF (P-12).** En **Panel → Resultados → Certificado PDF** (solo administradores):
+
+- Si **todas** las votaciones publicadas están cerradas, el PDF sale como **Certificado de resultados**, con los ganadores definitivos y líneas de firma (quiénes firman es una *Propuesta*, pendiente de la Fundación).
+- Si alguna sigue abierta o no ha abierto, sale como **Reporte parcial** y dice en grande que **no es un certificado**.
+- Trae una **huella de verificación SHA-256** calculada con los votos y calificaciones de MySQL: con los mismos datos sale la misma huella; si alguien altera un número, ya no coincide. La huella queda en la auditoría con cada descarga.
+
+Código: [`votaciones/certificado.py`](votaciones/certificado.py).
+
+**Correos: recuperar contraseña y comprobante del voto.**
+
+- **¿Olvidaste tu contraseña?** (RF-02): desde *Ingresar* se pide un enlace que llega al correo registrado. El enlace vence en 1 hora, sirve una sola vez y la pantalla no revela si el correo existe. Al cambiar la contraseña se desbloquea la cuenta si estaba bloqueada por intentos fallidos.
+- **Comprobante por correo** (RF-10): al votar llega un correo con el código de comprobante, la categoría, la votación y la opción elegida. El voto se guarda **antes** de enviar el correo: si el correo falla, el voto no se pierde y el fallo queda en la auditoría.
+
+Para que los correos lleguen de verdad se agregan al `.env` una cuenta de Gmail del proyecto y su **contraseña de aplicación** (no la contraseña normal; se crea en Cuenta de Google → Seguridad, con la verificación en dos pasos activa):
+
+```
+EMAIL_HOST_USER=correo.del.proyecto@gmail.com
+EMAIL_HOST_PASSWORD=clave_de_aplicacion_de_16_letras
+```
+
+Sin esas variables **no se envía nada**: el correo se imprime en la terminal donde corre `runserver` (modo de prueba), así se puede probar sin cuenta de correo. Nunca suba la clave real a GitHub. Código: [`cuentas/views.py`](cuentas/views.py) y [`votaciones/correos.py`](votaciones/correos.py).
 
 **Claves de los usuarios de prueba en un servidor.** Si se publica la aplicación, los usuarios de prueba se crean con claves propias definidas en las variables `DEMO_CLAVE_ADMIN`, `DEMO_CLAVE_JURADO` y `DEMO_CLAVE_VOTANTE`, nunca con las del README, que son públicas.
 
@@ -223,7 +247,7 @@ Crea votantes temporales; cada uno envía **dos votos casi a la vez** en la mism
 py manage.py test
 ```
 
-Son **129 pruebas** (resultados y ganadores en `test_resultados.py`, datos personales en `test_datos_personales.py`, carga en `test_carga.py`, gestión de usuarios en `test_usuarios_panel.py` y permisos por rol en `test_roles.py`, todas en `votaciones/tests/`; las de la Entrega 3 están en `votaciones/tests/test_entrega3.py`, una clase por caso CP-01 a CP-10, más la gestión desde el panel, y las de seguridad en `votaciones/tests/test_seguridad.py`). Deben terminar en `OK`. Las pruebas de hilos simultáneos reales (CP-09) solo corren con MySQL.
+Son **154 pruebas** (resultados y ganadores en `test_resultados.py`, Excel en `test_excel.py`, certificado PDF en `test_certificado_pdf.py`, recuperar contraseña en `test_recuperar_contrasena.py`, comprobante por correo en `test_comprobante_correo.py`, datos personales en `test_datos_personales.py`, carga en `test_carga.py`, gestión de usuarios en `test_usuarios_panel.py` y permisos por rol en `test_roles.py`, todas en `votaciones/tests/`; las de la Entrega 3 están en `votaciones/tests/test_entrega3.py`, una clase por caso CP-01 a CP-10, más la gestión desde el panel, y las de seguridad en `votaciones/tests/test_seguridad.py`). Deben terminar en `OK`. Las pruebas de hilos simultáneos reales (CP-09) solo corren con MySQL.
 
 | Grupo | Qué prueban |
 |---|---|
@@ -231,6 +255,8 @@ Son **129 pruebas** (resultados y ganadores en `test_resultados.py`, datos perso
 | Seguridad | Token CSRF en los formularios y página 403, límite de intentos de inicio de sesión, cabeceras de seguridad, cookies protegidas y contraseñas con hash |
 | Gestión desde el panel | Eliminar ediciones, categorías y votaciones con sus reglas, solo por POST y solo administradores |
 | **Entrega final (Eje 4)** | Ganadores por modo, empates, resultados públicos según visibilidad, correos ocultos y auditoría de consultas, permisos de consulta, prueba de carga con 40 votantes simultáneos (MySQL), gestión de usuarios y permisos por rol |
+| Exportaciones | Excel y certificado PDF: contenido, certificado vs. reporte parcial, huella que cambia con los votos, sin datos de votantes, solo administradores y auditoría |
+| Correos | Recuperar contraseña (enlace de un solo uso, correo inexistente, cuenta inactiva, reglas de contraseña, desbloqueo) y comprobante del voto (llega al votar, el voto no se pierde si el correo falla) |
 | Voto del público | Votación cerrada, próxima o en borrador, opción inactiva, restricción única en la base de datos |
 | Panel | Permisos, publicar solo con 2 opciones o más, exportación CSV |
 | Cuentas | Registro, validaciones e inicio de sesión |
@@ -241,7 +267,7 @@ Son **129 pruebas** (resultados y ganadores en `test_resultados.py`, datos perso
 
 ### Evidencia reproducible en GitHub
 
-Cada vez que alguien sube un commit, GitHub corre las pruebas solo, contra un **MySQL 8 real** ([`.github/workflows/pruebas.yml`](.github/workflows/pruebas.yml)): instala las librerías, crea las tablas, carga los datos de prueba y corre las 129 pruebas, incluidas las de solicitudes simultáneas. El resultado se ve en la pestaña **Actions** del repositorio y en la insignia de arriba de este README.
+Cada vez que alguien sube un commit, GitHub corre las pruebas solo, contra un **MySQL 8 real** ([`.github/workflows/pruebas.yml`](.github/workflows/pruebas.yml)): instala las librerías, crea las tablas, carga los datos de prueba y corre las 154 pruebas, incluidas las de solicitudes simultáneas. El resultado se ve en la pestaña **Actions** del repositorio y en la insignia de arriba de este README.
 
 ## 8. Modo rápido sin MySQL (opcional)
 
@@ -338,12 +364,14 @@ Cuando la Fundación apruebe una regla, se cambia a `APROBADA` en `votaciones/re
 | `prueba_carga` dice que necesita MySQL | Igual: la prueba de carga solo corre con MySQL |
 | `cargar_demo` dice «Ya hay datos de la edición 2027» | Use `py manage.py cargar_demo --reiniciar` (borra votos y usuarios creados y recarga con fechas nuevas) |
 | Se ve sin estilos | Abra `http://localhost:8888`, no el archivo HTML directamente |
+| `No module named 'openpyxl'` o `'reportlab'` | Faltan las librerías del Excel o del PDF: `py -m pip install -r requirements.txt` |
+| No llega el correo de recuperación o del comprobante | Sin `EMAIL_HOST_USER` y `EMAIL_HOST_PASSWORD` en el `.env` el correo sale en la terminal del servidor. Con Gmail, use una **contraseña de aplicación**, reinicie `runserver` y revise el spam. Los fallos de envío quedan en la auditoría como `correo_fallido` |
+| El enlace del correo no abre en el celular | En local el enlace apunta a `127.0.0.1`, que solo existe en el PC donde corre el servidor; ábralo en ese mismo PC |
 
 ## 12. Pendiente para las próximas entregas
 
 - Confirmar con la Fundación las reglas marcadas como *Propuesta*, en especial el modo de resultado (P-06).
-- Recuperación de contraseña por correo (requiere un servidor SMTP).
 - Verificación de la cuenta por código (P-02) y CAPTCHA contra bots (R-01).
-- Exportación a PDF y certificación de resultados (P-12).
+- Confirmar con la Fundación quiénes firman el certificado de resultados (P-12).
 - Publicar la aplicación en un servidor público con MySQL y HTTPS (la configuración de seguridad para producción ya está lista: `DJANGO_DEBUG=0`, `DJANGO_HTTPS=1`).
 - Definir con la Fundación el criterio de desempate (RN-12); hoy el sistema detecta el empate y no elige ganador.
