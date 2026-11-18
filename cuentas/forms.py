@@ -130,7 +130,8 @@ class RecuperarForm(PasswordResetForm):
         """
         asunto = "".join(loader.render_to_string(subject_template_name, context).splitlines())
         mensaje = EmailMultiAlternatives(asunto, loader.render_to_string(email_template_name, context),
-                                         from_email, [to_email])
+                                         from_email, [to_email],
+                                         headers={"Content-Language": "es"})   # para que Gmail no lo crea en inglés
         if html_email_template_name:
             mensaje.attach_alternative(loader.render_to_string(html_email_template_name, context), "text/html")
         try:

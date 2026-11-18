@@ -25,7 +25,8 @@ def _mensaje(voto, protocolo, dominio):
     }
     asunto = "".join(loader.render_to_string("votaciones/correo_comprobante_asunto.txt", contexto).splitlines())
     mensaje = EmailMultiAlternatives(asunto, loader.render_to_string("votaciones/correo_comprobante.txt", contexto),
-                                     settings.DEFAULT_FROM_EMAIL, [voto.usuario.email])
+                                     settings.DEFAULT_FROM_EMAIL, [voto.usuario.email],
+                                     headers={"Content-Language": "es"})   # para que Gmail no lo crea en inglés
     mensaje.attach_alternative(loader.render_to_string("votaciones/correo_comprobante.html", contexto), "text/html")
     return mensaje
 

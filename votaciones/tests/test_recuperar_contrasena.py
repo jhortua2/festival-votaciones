@@ -45,6 +45,7 @@ class RecuperarContrasena(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ["ana@hotmail.com"])
         self.assertIn("Recupera tu contraseña", mail.outbox[0].subject)
+        self.assertEqual(mail.outbox[0].extra_headers.get("Content-Language"), "es")
         self.assertTrue(Registro.objects.filter(accion="recuperacion_solicitada").exists())
 
     def test_con_el_enlace_cambia_la_contrasena_y_puede_entrar(self):

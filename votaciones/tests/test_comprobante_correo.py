@@ -36,6 +36,7 @@ class ComprobantePorCorreo(Base):
         self.assertIn(self.cancion.nombre, correo.body)
         html = correo.alternatives[0][0]
         self.assertIn(voto.codigo, html)
+        self.assertEqual(correo.extra_headers.get("Content-Language"), "es")
 
     def test_si_el_correo_falla_el_voto_queda_guardado(self):
         with mock.patch("django.core.mail.EmailMultiAlternatives.send", side_effect=SMTPException("caido")):
