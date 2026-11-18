@@ -1,7 +1,9 @@
 from django import forms
 from django.conf import settings
 from django.contrib.auth import password_validation
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm, SetPasswordForm
+from django.core.mail import EmailMultiAlternatives
+from django.template import loader
 from django.utils import timezone
 
 from . import intentos
@@ -102,3 +104,46 @@ class IngresoForm(AuthenticationForm):
         if correo:
             intentos.limpiar(correo)
         return datos
+
+
+class RecuperarForm(PasswordResetForm):
+    """RF-02 ¿Olvidaste tu contraseña? Pide el correo y envía un enlace para crear una nueva.
+
+    Django no avisa si el correo existe o no (así nadie puede averiguar quién está registrado),
+    y solo envía a cuentas activas.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["email"].label = "Correo electrónico"
+        self.fields["email"].help_text = "El correo con el que te registraste."
+        self.fields["email"].widget.attrs["autofocus"] = True
+        self.envio_fallido = False
+        _estilo(self)
+
+    def send_mail(self, subject_template_name, email_template_name, context, from_email, to_email,
+                  html_email_template_name=None):
+        """Igual que el de Django, pero recuerda si el envío falló para dejarlo en la auditoría.
+
+        A la persona se le muestra la misma pantalla de siempre: si se le avisara del fallo,
+        sabría que ese correo sí está registrado.
+        """
+        asunto = "".join(loader.render_to_string(subject_template_name, context).splitlines())
+        mensaje = EmailMultiAlternatives(asunto, loader.render_to_string(email_template_name, context),
+                                         from_email, [to_email])
+        if html_email_template_name:
+            mensaje.attach_alternative(loader.render_to_string(html_email_template_name, context), "text/html")
+        try:
+            mensaje.send()
+        except Exception:  # noqa: BLE001 - servidor caído, clave de aplicación mala, sin internet...
+            self.envio_fallido = True
+
+
+class NuevaContrasenaForm(SetPasswordForm):
+    """RF-02 Crear la nueva contraseña desde el enlace del correo (mismas reglas que en el registro)."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["new_password1"].label = "Nueva contraseña"
+        self.fields["new_password2"].label = "Repite la nueva contraseña"
+        _estilo(self)

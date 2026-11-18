@@ -3,11 +3,13 @@ from django.contrib.auth import login
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
+from django.urls import reverse_lazy
 
 from auditoria.servicios import registrar
 from votaciones.models import Categoria, Edicion, Voto
 
-from .forms import IngresoForm, RegistroForm
+from . import intentos
+from .forms import IngresoForm, NuevaContrasenaForm, RecuperarForm, RegistroForm
 
 
 def registro(request):
@@ -64,3 +66,45 @@ def csrf_fallo(request, reason=""):
     """Formulario sin token CSRF válido (falta, expiró o viene de otro sitio): no se procesa nada."""
     registrar(request, "csrf_rechazado", f"{request.method} {request.path} · {reason}"[:250])
     return render(request, "403_csrf.html", {"motivo": reason}, status=403)
+
+
+# --- ¿Olvidaste tu contraseña? (RF-02) ---------------------------------------------------------
+# Se usan las vistas de Django, que ya traen la seguridad: el enlace lleva un código que vence en
+# 1 hora (PASSWORD_RESET_TIMEOUT), sirve una sola vez y no revela si el correo está registrado.
+
+class RecuperarContrasena(auth_views.PasswordResetView):
+    template_name = "cuentas/recuperar.html"
+    form_class = RecuperarForm
+    email_template_name = "cuentas/correo_recuperar.txt"
+    html_email_template_name = "cuentas/correo_recuperar.html"
+    subject_template_name = "cuentas/correo_recuperar_asunto.txt"
+    success_url = reverse_lazy("cuentas:recuperar_enviado")
+
+    def form_valid(self, form):
+        respuesta = super().form_valid(form)
+        correo = form.cleaned_data["email"].strip().lower()
+        registrar(self.request, "recuperacion_solicitada", correo)
+        if form.envio_fallido:
+            # Queda para el administrador; a la persona se le muestra la pantalla de siempre
+            registrar(self.request, "correo_fallido", f"No se pudo enviar la recuperación a {correo}")
+        return respuesta
+
+
+class RecuperarEnviado(auth_views.PasswordResetDoneView):
+    template_name = "cuentas/recuperar_enviado.html"
+
+
+class NuevaContrasena(auth_views.PasswordResetConfirmView):
+    template_name = "cuentas/recuperar_nueva.html"
+    form_class = NuevaContrasenaForm
+    success_url = reverse_lazy("cuentas:recuperar_listo")
+
+    def form_valid(self, form):
+        respuesta = super().form_valid(form)
+        intentos.limpiar(form.user.email)          # si estaba bloqueado por intentos fallidos, se desbloquea
+        registrar(self.request, "contrasena_restablecida", form.user.email, usuario=form.user)
+        return respuesta
+
+
+class ContrasenaCambiada(auth_views.PasswordResetCompleteView):
+    template_name = "cuentas/recuperar_listo.html"

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block titulo %}Revisa tu correo{% endblock %}
+{% block contenido %}
+<div class="container-lg py-5">
+  <div class="mx-auto text-center" style="max-width:520px">
+    <h1 class="h-display mb-3" style="font-size:2rem">Revisa tu correo</h1>
+    <p>Si el correo que escribiste está registrado, te llegará un mensaje con un enlace para crear una contraseña nueva.</p>
+    <p class="text-secondary">El enlace sirve una sola vez y vence en 1 hora. Si no lo ves, revisa la carpeta de spam.</p>
+    <a class="btn btn-linea mt-2" href="{% url 'cuentas:login' %}">Volver a iniciar sesión</a>
+  </div>
+</div>
+{% endblock %}

@@ -164,6 +164,25 @@ SECURE_REFERRER_POLICY = "same-origin"
 LOGIN_MAX_INTENTOS = int(os.environ.get("LOGIN_MAX_INTENTOS", "5"))
 LOGIN_BLOQUEO_MINUTOS = int(os.environ.get("LOGIN_BLOQUEO_MINUTOS", "15"))
 
+# --- Correo (recuperar contraseña, RF-02) ---
+# Con EMAIL_HOST_USER y EMAIL_HOST_PASSWORD en el .env, los correos salen por SMTP (Gmail por defecto,
+# con una "clave de aplicación"). Sin ellos, no se envía nada: el correo se imprime en la terminal
+# donde corre el servidor, para poder probar y hacer la demostración sin cuenta de correo.
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+    EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+    EMAIL_USE_TLS = True
+    EMAIL_TIMEOUT = 15
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL") or (
+    f"Tu Voto Vallenato <{EMAIL_HOST_USER}>" if EMAIL_HOST_USER else "Tu Voto Vallenato <no-responder@festival.test>")
+# El enlace para cambiar la contraseña vence en 1 hora y deja de servir apenas se usa
+PASSWORD_RESET_TIMEOUT = 60 * 60
+
 if os.environ.get("DJANGO_HTTPS", "0") == "1":
     # Solo al desplegar con un certificado HTTPS (DJANGO_HTTPS=1 en el .env): cookies seguras y HTTPS obligatorio.
     # En el PC y en las pruebas de GitHub se trabaja con http, por eso viene apagado.

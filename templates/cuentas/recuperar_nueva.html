@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block titulo %}Nueva contraseña{% endblock %}
+{% block contenido %}
+<div class="container-lg py-4">
+  <div class="mx-auto" style="max-width:460px">
+    {% if validlink %}
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <h1 class="h-display mb-2" style="font-size:2rem">Crea tu nueva contraseña</h1>
+        <p class="text-secondary">Usa al menos 8 caracteres y que no sea fácil de adivinar.</p>
+        {% if form.non_field_errors %}<div class="alert alert-danger">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>{% endif %}
+        {% include "includes/campo.html" with campo=form.new_password1 %}
+        {% include "includes/campo.html" with campo=form.new_password2 %}
+        <button class="btn btn-sol btn-lg w-100" type="submit">Guardar contraseña</button>
+      </form>
+    {% else %}
+      <div class="text-center py-3">
+        <h1 class="h-display mb-3" style="font-size:2rem">Este enlace ya no sirve</h1>
+        <p class="text-secondary">Puede que ya se haya usado o que haya pasado más de 1 hora. Pide uno nuevo.</p>
+        <a class="btn btn-sol mt-2" href="{% url 'cuentas:recuperar' %}">Pedir otro enlace</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

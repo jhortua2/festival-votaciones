@@ -1,0 +1,11 @@
+Hola{% if user.first_name %} {{ user.first_name }}{% endif %},
+
+Recibimos una solicitud para cambiar la contraseña de tu cuenta en Tu Voto Vallenato ({{ email }}).
+
+Para crear una contraseña nueva, abre este enlace:
+{{ protocol }}://{{ domain }}{% url 'cuentas:recuperar_confirmar' uidb64=uid token=token %}
+
+El enlace sirve una sola vez y vence en 1 hora.
+Si no fuiste tú, ignora este correo: tu contraseña sigue igual.
+
+Tu Voto Vallenato · Festival de la Leyenda Vallenata
